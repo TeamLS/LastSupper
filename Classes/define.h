@@ -9,12 +9,19 @@
 #include "AudioEngine.h"
 #include <iostream>
 #include <fstream>
+
+// rapidjson
 #include "rapidjson/document.h"
 #include "rapidjson/filereadstream.h"
 #include "rapidjson/writer.h"
 #include "rapidjson/filewritestream.h"
 #include "rapidjson/prettywriter.h"
 #include "rapidjson/error/en.h"
+using namespace rapidjson;
+typedef GenericDocument< UTF8<> > Document;
+typedef GenericValue< UTF8<> > Value;
+typedef GenericStringStream< UTF8<> > StringStream;
+typedef GenericStringBuffer< UTF8<> > StringBuffer;
 
 // ゲームウインドウ横幅、縦幅
 #define WINDOW_WIDTH 800
@@ -29,7 +36,6 @@
 using namespace cocos2d;
 using namespace CocosDenshion;
 using namespace std;
-using namespace rapidjson;
 using namespace experimental;
 
 // メソッドログ
@@ -75,6 +81,7 @@ enum struct Direction
 	RIGHT,
 	LEFT,
 	BACK,
+    
 	SIZE,
 };
 
@@ -146,4 +153,20 @@ static __TYPE_1__* create(__TYPE_2__ param) \
 	} \
 }
 
+#define CREATE_FUNC_WITH_TWO_PARAM(__TYPE_1__, __TYPE_2__, __TYPE_3__) \
+static __TYPE_1__* create(__TYPE_2__ param1, __TYPE_3__ param2) \
+{ \
+    __TYPE_1__ *pRet = new(std::nothrow) __TYPE_1__(); \
+    if (pRet && pRet->init(param1, param2)) \
+    { \
+        pRet->autorelease(); \
+        return pRet; \
+    } \
+    else \
+    { \
+        delete pRet; \
+        pRet = NULL; \
+        return NULL; \
+    } \
+}
 #endif // __DEFINE_H__

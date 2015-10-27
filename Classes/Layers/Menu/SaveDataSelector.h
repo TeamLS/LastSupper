@@ -20,8 +20,8 @@ public:
 	
 	// クラス変数
 private:
-	static constexpr float INNER_H_MARGIN_RATIO {0.05f};
-	static constexpr float INNER_V_MARGIN_RATIO {0.05f};
+	static const float INNER_H_MARGIN_RATIO;
+	static const float INNER_V_MARGIN_RATIO;
 	
 	// インスタンスメソッド
 private:
@@ -39,6 +39,7 @@ public:
 private:
 	vector<PlayerDataManager::SaveIndex> saveDatas {};
     bool write_flag;
+    bool comfirm_flag;
 public:
 	function<void(int)> onSaveDataSelected { nullptr };
 	function<void()> onSaveDataSelectCancelled { nullptr };

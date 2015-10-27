@@ -9,29 +9,30 @@
 #ifndef __LastSupper__ControlMainCharacterTask__
 #define __LastSupper__ControlMainCharacterTask__
 
-#include "Common.h"
+#include "Tasks/GameTask.h"
 
-class DungeonScene;
+class TaskMediator;
 
-class ControlMainCharacterTask : public Ref
+class ControlMainCharacterTask : public GameTask
 {
 // クラスメソッド
 public:
-    CREATE_FUNC_WITH_PARAM(ControlMainCharacterTask, DungeonScene*)
+    CREATE_FUNC_WITH_PARAM(ControlMainCharacterTask, TaskMediator*)
 
 // インスタンス変数
 private:
-    DungeonScene* scene {nullptr};
+    int riddenEventID { static_cast<int>(EventID::UNDIFINED)};
     
 // インスタンスメソッド
 private:
     ControlMainCharacterTask();
     ~ControlMainCharacterTask();
-    bool init(DungeonScene* dungeonScene);
+    bool init(TaskMediator* mediator);
 public:
     void turn(const Direction& direction);      // 向きを変える
     void search();                              // 目の前を調べる
     void walking(vector<Direction> directions); // 歩行中
+    void onCharacterWalkedOneGrid();            // 一マス分移動し終えた時
 };
 
 #endif /* defined(__LastSupper__ControlMainCharacterTask__) */

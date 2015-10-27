@@ -18,14 +18,16 @@ class DungeonMenuScene : public baseScene
 {
 // クラスメソッド
 public:
-    static Scene* createScene(Texture2D* screen);
-    CREATE_FUNC_WITH_PARAM(DungeonMenuScene, Texture2D*);
+    static Scene* createScene(Texture2D* screen, function<void()> onPopMenuScene);
+    //CREATE_FUNC_WITH_PARAM(DungeonMenuScene, Texture2D*);
+    CREATE_FUNC_WITH_TWO_PARAM(DungeonMenuScene, Texture2D*, function<void()>);
 // インスタンス変数
+public:
+    function<void()> onPopMenuScene;
 private:
     DungeonMainMenuLayer* mainMenu {nullptr};
     SaveDataSelector* saveDataSelector {nullptr};
     int menuIndex {0};
-    function<void()> onPopMenuScene;
     
 // インスタンスメソッド
 public:
@@ -33,7 +35,7 @@ public:
 private:
     DungeonMenuScene();
     ~DungeonMenuScene();
-    bool init(Texture2D* screen);
+    bool init(Texture2D* screen, function<void()> onPopMenuScene);
     virtual void onPreloadFinished() override;
     virtual void onCursorKeyPressed(const Key& key) override;
     virtual void onSpaceKeyPressed() override;
@@ -42,6 +44,9 @@ private:
     void onSaveMenuSelected();
     void onSaveDataSelected(int dataId);
     void onSaveDataSelectCancelled();
+    void createMainMenu();
+    void createSaveMenu();
+    void createItemMenu();
 };
 
 #endif /* defined(__LastSupper__DungeonMenuScene__) */

@@ -13,9 +13,8 @@
 
 class AmbientLightLayer;
 class TiledMapLayer;
-class EventScriptTask;
-class ControlMainCharacterTask;
-class DungeonMainMenuLayer;
+class MapObjectList;
+class TaskMediator;
 
 class DungeonScene : public baseScene
 {
@@ -26,28 +25,25 @@ public:
 	
 // インスタンス変数
 private:
+    cocos2d::FileUtils* fu;
     TiledMapLayer* mapLayer { nullptr };
     AmbientLightLayer* ambientLightLayer {nullptr};
-    EventScriptTask* eventScriptTask { nullptr };
-    ControlMainCharacterTask* controlMainCharacterTask {nullptr};
-    DungeonMainMenuLayer* mainMenu { nullptr };
+    MapObjectList* objectList { nullptr };
+    TaskMediator* mediator { nullptr };
     
 // インスタンスメソッド
 public:
-    void runEvent(int event_id);
+    TiledMapLayer* getMapLayer() const;
+    EventListenerKeyboardLayer* getListener() const;
     
 private:
 	DungeonScene();
 	~DungeonScene();
 	virtual bool init() override;
 	virtual void onPreloadFinished() override;
-    virtual void onCursorKeyPressed(const Key& key) override;
-    virtual void onSpaceKeyPressed() override;
     virtual void onMenuKeyPressed() override;
-    virtual void intervalInputCheck(const vector<Key>& keys);
-	
-	friend class EventScriptTask;
-    friend class ControlMainCharacterTask;
+    
+    friend class TaskMediator;
 };
 
 

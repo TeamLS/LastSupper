@@ -14,24 +14,24 @@
 #include "Effects/AmbientLightLayer.h"
 
 #include "Layers/Dungeon/TiledMapLayer.h"
-#include "Layers/Message/CharacterMessageLayer.h"
-#include "Layers/Menu/DungeonMainMenuLayer.h"
+#include "Layers/EventListener/EventListenerKeyboardLayer.h"
 
-#include "Tasks/EventScriptTask.h"
-#include "Tasks/ControlMainCharacterTask.h"
+#include "Tasks/TaskMediator.h"
 
+#include "MapObjects/MapObjectList.h"
+#include "MapObjects/Character.h"
 #include "MapObjects/Objects.h"
 
 // コンストラクタ
-DungeonScene::DungeonScene(){FUNCLOG}
+DungeonScene::DungeonScene():fu(FileUtils::getInstance()){FUNCLOG}
 
 // デストラクタ
 DungeonScene::~DungeonScene()
 {
 	FUNCLOG
     
-	CC_SAFE_RELEASE_NULL(this->eventScriptTask);
-    CC_SAFE_RELEASE_NULL(this->controlMainCharacterTask);
+	CC_SAFE_RELEASE_NULL(this->mediator);
+    CC_SAFE_RELEASE_NULL(this->objectList);
 }
 
 // シーン生成
@@ -47,30 +47,10 @@ Scene* DungeonScene::createScene()
 bool DungeonScene::init()
 {
 	FUNCLOG
+    
     EventScriptManager::getInstance()->setEventScript(CsvDataManager::getInstance()->getFileName(CsvDataManager::DataType::MAP, PlayerDataManager::getInstance()->getLocation().map_id));
     
-    if(!baseScene::init(DungeonSceneData::create())) return false;
-    //EventScriptManager::getInstance()->setEventScript("TestScript");
-    
-    // イベントスクリプト処理クラスを生成
-    EventScriptTask* eventScriptTask {EventScriptTask::create(this)};
-    CC_SAFE_RETAIN(eventScriptTask);
-    this->eventScriptTask = eventScriptTask;
-    eventScriptTask->runEventScript(0);
-    
-    // 主人公操作処理クラスを生成
-    ControlMainCharacterTask* controlMainCharacterTask {ControlMainCharacterTask::create(this)};
-    CC_SAFE_RETAIN(controlMainCharacterTask);
-    this->controlMainCharacterTask = controlMainCharacterTask;
-    
-    // リスナにコールバックを設定
-    this->listener->intervalInputCheck = CC_CALLBACK_1(DungeonScene::intervalInputCheck, this);
-    this->listener->setInputCheckDelay(Character::DURATION_FOR_ONE_STEP);
-    this->listener->setInputCheckInterval(Character::DURATION_FOR_ONE_STEP);
-    
-    this->listener->setEnabled(false);
-    
-    return true;
+    return baseScene::init(DungeonSceneData::create());
 }
 
 // リソースプリロード完了時の処理
@@ -78,77 +58,73 @@ void DungeonScene::onPreloadFinished()
 {
 	FUNCLOG
 	
-	// 黒い幕を張っておく
-	Sprite* black { Sprite::create()};
-	black->setTextureRect(Rect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT));
-	black->setColor(Color3B::BLACK);
-	black->setGlobalZOrder(Priority::SCREEN_COVER);
-	black->setPosition(WINDOW_CENTER);
-	this->addChild(black);
-	
 	// マップレイヤーを生成
 	TiledMapLayer* mapLayer {TiledMapLayer::create(PlayerDataManager::getInstance()->getLocation())};
 	mapLayer->setGlobalZOrder(Priority::MAP);
 	this->addChild(mapLayer);
 	this->mapLayer = mapLayer;
     
+    // マップレイヤからオブジェクトリストを取り出す
+    this->objectList = mapLayer->getMapObjectList();
+    CC_SAFE_RETAIN(this->objectList);
+    
     // 環境光レイヤー生成
     AmbientLightLayer* ambientLightLayer {AmbientLightLayer::create(AmbientLightLayer::NIGHT)};
     ambientLightLayer->setGlobalZOrder(Priority::AMBIENT_LIGHT);
     this->addChild(ambientLightLayer);
     this->ambientLightLayer = ambientLightLayer;
-
-	// 黒い幕をフェードアウト
-	this->runAction(Sequence::create(TargetedAction::create(black, FadeOut::create(0.3f)),
-									 TargetedAction::create(black, RemoveSelf::create()),
-									 nullptr));
     
     this->listener->setEnabled(true);
     
     mapLayer->getMainCharacter()->setLight(Light::create(Light::Information(20)), ambientLightLayer);
     
-	return;
-}
-
-//EventScriptTaskのrunEventScriptを実行
-void DungeonScene::runEvent(int event_id)
-{
-    if(event_id == static_cast<int>(EventID::UNDIFINED)) return;
-    this->eventScriptTask->runEventScript(event_id);
-    return;
-}
-
-// 方向キーを押した時
-void DungeonScene::onCursorKeyPressed(const Key& key)
-{
-    this->controlMainCharacterTask->turn(MapUtils::keyToDirection(key));
-}
-
-// スペースキーを押した時
-void DungeonScene::onSpaceKeyPressed()
-{
-    this->controlMainCharacterTask->search();
-}
-
-// キーを押し続けている時
-void DungeonScene::intervalInputCheck(const vector<Key>& keys)
-{
+    // タスククラスを生成
+    TaskMediator* mediator {TaskMediator::create(this)};
+    CC_SAFE_RETAIN(mediator);
+    this->mediator = mediator;
     
-    this->controlMainCharacterTask->walking(MapUtils::keyToDirection(keys));
+    // リスナにコールバックを設定
+    this->listener->onCursorKeyPressed = CC_CALLBACK_1(TaskMediator::onCursorKeyPressed, this->mediator);
+    this->listener->onSpaceKeyPressed = CC_CALLBACK_0(TaskMediator::onSpaceKeyPressed, this->mediator);
+    this->listener->intervalInputCheck = CC_CALLBACK_1(TaskMediator::intervalInputCheck, this->mediator);
+    this->listener->setInputCheckDelay(Character::DURATION_FOR_ONE_STEP);
+    this->listener->setInputCheckInterval(Character::DURATION_FOR_ONE_STEP);
 }
 
 // メニューキー押したとき
 void DungeonScene::onMenuKeyPressed()
 {
     FUNCLOG
-    // キーをリリース
-    this->listener->releaseKeyAll();
-    // スクショ撮る
-    RenderTexture* texture = RenderTexture::create(WINDOW_WIDTH, WINDOW_HEIGHT);
-    texture->setPosition(WINDOW_CENTER);
-    texture->begin();
-    this->visit();
-    texture->end();
-    // ダンジョンメニューシーンをスクショを引数にしてプッシュ
-    Director::getInstance()->pushScene(DungeonMenuScene::createScene(texture->getSprite()->getTexture()));
+    this->listener->setEnabled(false);
+    // 主人公の位置をセット
+    Character* chara = this->mapLayer->getMapObjectList()->getMainCharacter();
+    Point point = chara->getGridPosition(this->mapLayer->getTiledMap()->getContentSize());
+    Direction dir = chara->getDirection();
+    PlayerDataManager::Location location{PlayerDataManager::getInstance()->getLocation().map_id, static_cast<int>(point.x), static_cast<int>(point.y), dir};
+    PlayerDataManager::getInstance()->setLocation(location);
+    // スクショをとって、ダンジョンメニューシーンをプッシュ
+    string path = LastSupper::StringUtils::strReplace("global.json", "screen0.png", fu->FileUtils::fullPathForFilename("save/global.json"));
+    utils::captureScreen([=](bool success, string filename){
+     if(success)
+     {
+         Sprite* screen = Sprite::create(filename);
+         Scene* menu = DungeonMenuScene::createScene(screen->getTexture(), [=](){this->listener->setEnabled(true);});
+         // メニューシーンをプッシュ
+         Director::getInstance()->pushScene(menu);
+         // cache削除
+         Director::getInstance()->getTextureCache()->removeTextureForKey(filename);
+     }
+    }, path);
+}
+
+// マップレイヤを取得
+TiledMapLayer* DungeonScene::getMapLayer() const
+{
+    return this->mapLayer;
+}
+
+// イベントリスナを取得
+EventListenerKeyboardLayer* DungeonScene::getListener() const
+{
+    return this->listener;
 }

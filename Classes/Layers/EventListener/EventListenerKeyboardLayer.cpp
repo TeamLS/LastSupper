@@ -51,6 +51,7 @@ bool EventListenerKeyboardLayer::init()
 // リスナを有効/無効化
 void EventListenerKeyboardLayer::setEnabled(bool enabled)
 {
+    this->releaseKeyAll();
     this->listenerKeyboard->setEnabled(enabled);
 }
 
@@ -63,7 +64,16 @@ void EventListenerKeyboardLayer::setInputCheckDelay(float delay)
 // キー入力の確認間隔を設定
 void EventListenerKeyboardLayer::setInputCheckInterval(float interval)
 {
+    if(this->interval == interval) return;
+    
     this->interval = interval;
+    
+    // すでにスケジュールされていたら、一旦スケジュール停止して新たなインターバルで再開する
+    if(this->isScheduled(CC_SCHEDULE_SELECTOR(EventListenerKeyboardLayer::inputCheck)))
+    {
+        this->unschedule(CC_SCHEDULE_SELECTOR(EventListenerKeyboardLayer::inputCheck));
+        this->schedule(CC_SCHEDULE_SELECTOR(EventListenerKeyboardLayer::inputCheck), interval);
+    }
 }
 
 // キーを押した時
@@ -109,7 +119,7 @@ void EventListenerKeyboardLayer::onKeyReleased(const EventKeyboard::KeyCode& key
 }
 
 //　キーを離すとき
-void EventListenerKeyboardLayer::releaseKey(const Key key)
+void EventListenerKeyboardLayer::releaseKey(const Key& key)
 {
     if(key == Key::SIZE) return;
     this->keyStatus[key] = false;

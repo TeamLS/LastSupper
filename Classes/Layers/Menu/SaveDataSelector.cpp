@@ -7,8 +7,12 @@
 //
 
 #include "Layers/Menu/SaveDataSelector.h"
-
 #include "Layers/EventListener/EventListenerKeyboardLayer.h"
+#include "Scenes/DungeonScene.h"
+
+// 定数
+const float SaveDataSelector::INNER_H_MARGIN_RATIO = 0.05f;
+const float SaveDataSelector::INNER_V_MARGIN_RATIO = 0.05f;
 
 // コンストラクタ
 SaveDataSelector::SaveDataSelector(){FUNCLOG}
@@ -22,8 +26,9 @@ bool SaveDataSelector::init(bool write = false)
 	FUNCLOG
 	if(!MenuLayer::init(2, PlayerDataManager::MAX_SAVE_COUNT / 2)) return false;
 	
-    // 書き込みフラグをセット
+    // フラグをセット
     this->write_flag = write;
+    this->comfirm_flag = false;
 	// 黒い背景を生成
 	Sprite* black = Sprite::create();
 	black->setTextureRect(Rect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT));
@@ -47,7 +52,7 @@ bool SaveDataSelector::init(bool write = false)
 		
 		// 表示ラベルを生成
 		// データ名
-		Label* name = Label::createWithTTF(data.name, "fonts/cinecaption2.28.ttf", panelSize.height / 5);
+		Label* name = Label::createWithTTF(data.chapter, "fonts/cinecaption2.28.ttf", panelSize.height / 5);
 		name->setPosition(Point(name->getContentSize().width / 2 + panelSize.width * INNER_H_MARGIN_RATIO, panel->getContentSize().height / 2));
 		panel->addChild(name);
 		
@@ -65,9 +70,13 @@ bool SaveDataSelector::init(bool write = false)
 		panel->setCascadeOpacityEnabled(true);
 		panel->setOpacity(100);
 	}
-	
+    
+    // デフォルトセレクト
 	this->setCascadeOpacityEnabled(true);
-	this->onIndexChanged(this->getSelectedIndex(), false);
+    int id = PlayerDataManager::getInstance()->getSaveDataId();
+    int index = (id <= 0) ? 0 : id - 1;
+    this->setSelectedIndex(index);
+	this->onIndexChanged(index, false);
 	
 	return true;
 }
@@ -89,6 +98,10 @@ void SaveDataSelector::hide()
 // 選択しているindexが変わった時
 void SaveDataSelector::onIndexChanged(int newIdx, bool sound)
 {
+    if (sound)
+    {
+        SoundManager::getInstance()->playSound("se/cursorMove.mp3");
+    }
 	for(Node* obj : this->menuObjects)
 	{
 		if(obj->getTag() == newIdx)
@@ -105,29 +118,49 @@ void SaveDataSelector::onIndexChanged(int newIdx, bool sound)
 // 決定キーを押した時
 void SaveDataSelector::onSpacePressed(int idx)
 {
+    // インクリメント
+    idx++;
+    // 確認時
+    if (this->comfirm_flag)
+    {
+        if(this->onSaveDataSelectCancelled)
+        {
+            this->onSaveDataSelectCancelled();
+        }
+        this->comfirm_flag = false;
+        return;
+    }
+    // セーブorロード
     if (this->write_flag)
     {
         // セーブ時
-        SoundManager::getInstance()->playSound("se/back.mp3");
-        cout << "SAVE!" << endl;
-        return;
+        SoundManager::getInstance()->playSound("se/save.mp3");
+        PlayerDataManager::getInstance()->save(idx);
+        Sprite* back = Sprite::create();
+        back->setTextureRect(Rect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT/4));
+        back->setColor(Color3B::BLACK);
+        back->setPosition(WINDOW_CENTER);
+        this->addChild(back);
+        Label* message = Label::createWithTTF("セーブが完了しました", "fonts/cinecaption2.28.ttf", back->getContentSize().height / 5);
+        message->setPosition(Point(message->getContentSize().width / 2 + (WINDOW_WIDTH - message->getContentSize().width)/2, back->getContentSize().height / 2));
+        back->addChild(message);
+        this->comfirm_flag = true;
     } else
     {
         // ロード時
-        SoundManager::getInstance()->playSound("se/back.mp3");
-        cout << "LOAD!" << endl;
-        return;
+        if(PlayerDataManager::getInstance()->checkSaveDataExists(idx))
+        {
+            // ロード
+            SoundManager::getInstance()->playSound("se/load.mp3");
+            PlayerDataManager::getInstance()->setMainLocalData(idx);
+            Director::getInstance()->replaceScene(DungeonScene::createScene());
+        } else
+        {
+            // セーブデータが存在しない
+            SoundManager::getInstance()->playSound("se/failure.mp3");
+        }
     }
-	// 指定セーブデータがプレイヤーによってセーブされたものであるか判別
-	/*if(this->saveDatas.at(idx).save_count == PlayerDataManager::DEFAULT_COUNT)
-	{
-		SoundManager::getInstance()->playSound("se/back.mp3");
-		return;
-	}
-	if(this->onSaveDataSelected)
-	{
-		this->onSaveDataSelected(this->saveDatas.at(idx).data_id);
-	}*/
+    return;
 }
 
 // メニューキーを押した時
