@@ -8,9 +8,9 @@
 
 #include "MapUtils.h"
 
-Point MapUtils::convertToCCPoint(const Size& mapSize, const Point& gridPoint)
+Point MapUtils::convertToCCPoint(const Size& mapSize, const Point& gridPoint, const Size& objectSize)
 {
-	return Point(gridPoint.x * GRID, mapSize.height - gridPoint.y * GRID);
+	return Point(gridPoint.x * GRID + objectSize.width / 2, mapSize.height - gridPoint.y * GRID + (objectSize.height - GRID * 2) / 2);
 }
 
 Point MapUtils::convertToMapPoint(const Size& mapSize, const Point& ccPoint)
@@ -144,4 +144,20 @@ bool MapUtils::intersectsGridRect(const Rect& rect1, const Rect& rect2)
              rect1.getMinX() > rect2.getMaxX() - 1||
              rect1.origin.y - rect1.size.height + 1 > rect2.getMinY() ||
              rect1.getMinY() < rect2.origin.y - rect2.size.height + 1);
+}
+
+// 反対方向を取得
+Direction MapUtils::oppositeDirection(const Direction& direction)
+{
+    map<Direction, Direction> directionMap
+    {
+        {Direction::FRONT, Direction::BACK},
+        {Direction::BACK, Direction::FRONT},
+        {Direction::RIGHT, Direction::LEFT},
+        {Direction::LEFT, Direction::RIGHT},
+    };
+    
+    if(directionMap.count(direction) == 0) return Direction::SIZE;
+    
+    return directionMap[direction];
 }

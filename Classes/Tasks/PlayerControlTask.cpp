@@ -9,7 +9,6 @@
 #include "Tasks/PlayerControlTask.h"
 
 #include "MapObjects/Character.h"
-#include "MapObjects/MapObject.h"
 #include "MapObjects/MapObjectList.h"
 #include "MapObjects/Party.h"
 
@@ -34,8 +33,6 @@ void PlayerControlTask::turn(const Key& key, Party* party)
 {
     if(!this->enableControl) return;
     
-    this->party = party;
-    
     Direction direction { MapUtils::keyToDirection(key) };
     Character* mainCharacter {party->getMainCharacter()};
     
@@ -46,14 +43,11 @@ void PlayerControlTask::turn(const Key& key, Party* party)
         mainCharacter->setDirection(direction);
         
         // 一定時間後に歩行開始
-        this->scheduleOnce(CC_SCHEDULE_SELECTOR(PlayerControlTask::startWalking), MapObject::DURATION_MOVE_ONE_GRID);
+        this->runAction(Sequence::createWithTwoActions(DelayTime::create(MapObject::DURATION_MOVE_ONE_GRID), CallFunc::create([this, party]
+        {
+            this->walking(DungeonSceneManager::getInstance()->getPressedCursorKeys(), party);
+        })));
     }
-}
-
-// 歩行開始
-void PlayerControlTask::startWalking(float _)
-{
-    this->walking(DungeonSceneManager::getInstance()->getPressedCursorKeys(), this->party);
 }
 
 // 目の前を調べる
@@ -96,22 +90,14 @@ void PlayerControlTask::walking(const vector<Key>& keys, Party* party)
     // 入力から、使う方向の個数を決める
     int directionCount {(directions.size() == 2 && directions.back() != directions.at(directions.size() - 2) && static_cast<int>(directions.back()) + static_cast<int>(directions.at(directions.size() - 2)) != 3)?static_cast<int>(directions.size()):1};
     
-    // 入力が２以上の時、斜め方向に当たり判定があるか確認
-    bool isHit {(directionCount > 1)?mainCharacter->isHit({directions.back(), directions.at(directionCount - 2)}):false};
-    
-    // 方向から当たり判定を一方向づつ確認し、移動方向に詰める
     vector<Direction> moveDirections {};
-    for(int i {static_cast<int>(directions.size()) - 1}; i >= static_cast<int>(directions.size()) - directionCount; i--)
+    for(int i { 0 }; i < directions.size(); i++)
     {
-        if((!isHit && !mainCharacter->isHit(directions.at(i))) || (isHit && !mainCharacter->isHit(directions.at(i)) && moveDirections.empty()))
-        {
-            moveDirections.push_back(directions.at(i));
-        }
+        if(directions.size() - directionCount > i) continue;
+        moveDirections.push_back(directions.at(i));
     }
     
-    if(moveDirections.empty()) return;
-    
-    party->move(moveDirections, ratio, [this, party]{this->onPartyMovedOneGrid(party);});
+    if(!party->move(moveDirections, ratio, [this, party]{this->onPartyMovedOneGrid(party);})) return;
     
     Vector<MapObject*> objs { DungeonSceneManager::getInstance()->getMapObjectList()->getMapObjectsByGridRect(mainCharacter->getGridRect(), Trigger::RIDE) };
     
@@ -143,7 +129,7 @@ void PlayerControlTask::onPartyMovedOneGrid(Party* party)
 }
 
 // 操作可能状態か設定
-void PlayerControlTask::setControlEnable(bool enable)
+void PlayerControlTask::setControlEnable(bool enable, Party* party)
 {
     this->enableControl = enable;
     

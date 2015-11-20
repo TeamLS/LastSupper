@@ -11,6 +11,8 @@
 
 #include "define.h"
 
+class CharacterData;
+
 class PlayerDataManager
 {
 //構造体
@@ -25,16 +27,7 @@ public:
         SaveIndex(int i, const string& chap, const string& mn, const string& pt, const string& sc):data_id(i), chapter(chap), map_name(mn), play_time(pt), save_count(sc){};
         SaveIndex(){};
     };
-    struct Location
-    {
-        int map_id{0};
-        int x {0};
-        int y {0};
-        Direction direction {Direction::SIZE};
-        Location(int map_id, int x, int y, int direction):map_id(map_id), x(x), y(y), direction(static_cast<Direction>(direction)){};
-        Location(int map_id, int x, int y, Direction direction):map_id(map_id), x(x), y(y), direction(direction){};
-        Location(){};
-    };
+    
 
 //インスタンス変数
 private:
@@ -69,38 +62,51 @@ public:
     double getSec();
     /* flag管理系 */
     // SET
-    void setLocation(const Location& location);
+    void setLocation(const Location& location, const int num = 0);
     void setFriendship(const int chara_id, const int level);
-    void setEventFlag(const int map_id, const int event_id, const bool& flag);
+    void setEventFlag(const int map_id, const int event_id, const bool flag);
+    void setPeculiarFlag(const int flag_id, const bool flag);
     void setItem(const int item_id);
     void setItemEquipment(const Direction direction, const int item_id);
-    bool setItemUsed(const int item_id);
     void setChapterId(const int chapter_id);
     void setCharacterProfile(const int chara_id, const int level);
+    void setPartyMember(const CharacterData& chara);
+    
+    // REMOVE
+    bool removeItem(const int item_id);
+    bool removePartyMember(const int chara_id);
+    
     // GET
-    Location getLocation();
+    Location getLocation(const int num = 0);
     int getFriendship(const int chara_id);
     bool getEventFlag(const int map_id, const int event_id);
+    bool getPeculiarFlag(const int flag_id);
     int getItem(const int item_id);
     map<int, int> getItemAll();
     int getItemEquipment(Direction direction);
     int getChapterId();
     int getCharacterProfileLevel(const int chara_id);
+    CharacterData getPartyMember(const int num = 0);
+    vector<CharacterData> getPartyMemberAll();
+    
     // CHECK
     bool checkItem(const int item_id);
     bool checkItemEquipment(const int item_id);
     bool checkFriendship(const int chara_id, const int val);
     bool checkChapterId(const int chapter_id);
+    
 private:
-    //グローバルデータのセット
+    // グローバルデータのセット
     bool setGlobalData();
-    //セーブデータを全初期化
+    // セーブデータを全初期化
     void initializeFiles();
-    //JSONファイル読み込み
+    // JSONファイル読み込み
     rapidjson::Document readJsonFile(const string& path);
-    //JSONファイル書き出し
+    // JSONファイル書き出し
     void writeJsonFile(const string& path, const rapidjson::Document& doc);
-
+    // rapidjsoのstringを生成
+//    rapidjson::Value& getRapidjsonString(const char* str);
+//    rapidjson::Value& getRapidjsonString(const int num);
 //singleton用関数
 public:
     static PlayerDataManager* getInstance();

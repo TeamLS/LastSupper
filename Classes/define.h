@@ -58,6 +58,7 @@ enum Priority
 	STORY_MESSAGE = 102,
 	SYSTEM_MESSAGE = 101,
     CHARACTER_MESSAGE = 100,
+    SELECT_LAYER = 92,
     BUTTON_MASHING_LAYER = 91,
     DISP_IMAGE_LAYER = 90,
     SCREEN_COVER = 80,
@@ -119,6 +120,16 @@ enum struct CharacterID
     UNDIFINED = -1,
 };
 
+enum struct EnemyID
+{
+    UNDIFINED = -1,
+};
+
+enum struct MapID
+{
+    UNDIFINED = -1,
+};
+
 // 味方キャラクタの動き方
 enum struct CharacterMovePattern
 {
@@ -131,14 +142,25 @@ enum struct CharacterMovePattern
 // 敵キャラクタの動き方
 enum struct EnemyMovePattern
 {
-    CHASE,
+    CHEAP_CHASER,
     RANDOM,
     SPEED_UP,
     PERFECT_RANDOM,
-    SERCH,
-    PERFECT_CHASE,
+    SCOUTER,
+    CHASER,
     
     SIZE,
+};
+
+struct Location
+{
+    int map_id{0};
+    int x {0};
+    int y {0};
+    Direction direction {Direction::SIZE};
+    Location(int map_id, int x, int y, int direction):map_id(map_id), x(x), y(y), direction(static_cast<Direction>(direction)){};
+    Location(int map_id, int x, int y, Direction direction):map_id(map_id), x(x), y(y), direction(direction){};
+    Location(){};
 };
 
 // パラメータを一つタイプを指定してcreate

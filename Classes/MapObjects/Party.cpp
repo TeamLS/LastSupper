@@ -14,15 +14,23 @@
 Party::Party() {FUNCLOG};
 
 // デストラクタ
-Party::~Party() {FUNCLOG};
+Party::~Party()
+{
+    FUNCLOG
+
+    this->members.clear();
+};
 
 // 初期化
-bool Party::init(Character* mainCharacter)
+bool Party::init(const vector<CharacterData>& datas)
 {
-    if(!mainCharacter) return false;
+    if(datas.empty()) return false;
     
-    // 先頭に主人公を配置する
-    this->addMember(mainCharacter);
+    // データを元にキャラクタを生成して格納
+    for(CharacterData data : datas)
+    {
+        this->members.pushBack(Character::create(data));
+    }
     
     return true;
 }
@@ -35,7 +43,7 @@ void Party::addMember(Character* character)
 }
 
 // パーティを移動
-void Party::move(const vector<Direction>& directions, float ratio, function<void()> callback)
+bool Party::move(const vector<Direction>& directions, float ratio, function<void()> callback)
 {
     Direction direction {Direction::SIZE};
     Point destPos { Point::ZERO };
@@ -50,7 +58,11 @@ void Party::move(const vector<Direction>& directions, float ratio, function<void
         if(i == 0)
         {
             dirs = directions;
-            cb = callback;
+            cb = [this, callback, character]
+            {
+                callback();
+                if(this->onPartyMoved) this->onPartyMoved(character->getGridPosition());
+            };
         }
         // 主人公以外について
         if(i != 0)
@@ -59,11 +71,13 @@ void Party::move(const vector<Direction>& directions, float ratio, function<void
             dirs = MapUtils::vecToDirections(destPos - character->getPosition());
         }
         
-        character->walkBy(dirs, 1, cb, ratio);
+        if(!character->walkBy(dirs, cb, ratio)) return false;
         
         direction = character->getDirection();
         destPos = character->getPosition();
     }
+    
+    return true;
 }
 
 // 主人公を取得
@@ -76,19 +90,4 @@ Character* Party::getMainCharacter() const
 Vector<Character*> Party::getMembers() const
 {
     return this->members;
-}
-
-// リロード
-void Party::reload()
-{
-    Vector<Character*> newMembers {};
-    
-    for(Character* chara : this->members)
-    {
-        newMembers.pushBack(Character::create(chara->getCharacterId(), chara->getDirection()));
-    }
-    
-    this->members.clear();
-    
-    this->members = newMembers;
 }

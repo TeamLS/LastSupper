@@ -19,6 +19,7 @@ class EventFactory;
 class EventScript;
 class EventScriptValidator;
 class Party;
+class GameEvent;
 
 // ダンジョンシーンのマップ間で共有すべき情報を持つシングルトンクラス
 class DungeonSceneManager
@@ -32,7 +33,6 @@ public:
 private:
     EventFactory* eventFactory { nullptr };
     EventScriptValidator* scriprtValidator { nullptr };
-    Party* party { nullptr };
     
 // インスタンスメソッド
 private:
@@ -58,11 +58,9 @@ public:
     void addMapObject(MapObject* mapobject);
     
     // Director
-    void changeMap(const PlayerDataManager::Location& location);
+    void changeMap(const Location& location);
     
     // EventListener
-    void setInputCheckInterval(const float interval);
-    void setEventListenerPaused(const bool paused);
     bool isPressed(const Key& key);
     vector<Key> getPressedCursorKeys() const;
     
@@ -70,6 +68,8 @@ public:
     void runEvent(const int eventId);
     void pushEventBack(const int eventId);
     void pushEventFront(const int eventId);
+    void pushEventBack(GameEvent* event);
+    void pushEventFront(GameEvent* event);
     void runEventQueue();
     bool existsEvent() const;
     int getRunningEventId() const;

@@ -32,6 +32,8 @@ private:
     MapObjectList* objectList { nullptr };
     Point gridPosition {Point::ZERO};
     bool _isMoving { false };
+protected:
+    deque<vector<Direction>> directionsQueue {};
 public:
     function<void(MapObject*)> onMove { nullptr };
 	
@@ -57,16 +59,25 @@ public:
 	int getEventId() const;
 	Trigger getTrigger() const;
     bool isMoving() const;
+    
+    // collision
 	const bool isHit() const;
     const bool isHit(const Direction& direction) const;
-    const bool isHit(const Direction (&directions)[2]) const;
+    const bool isHit(const vector<Direction>& directions) const;
     Rect getCollisionRect() const;
     Rect getCollisionRect(const Direction& direction) const;
-    Rect getCollisionRect(const Direction (&directions)[2]) const;
+    Rect getCollisionRect(const vector<Direction>& directions) const;
 
-    void moveBy(const Direction& direction, const int gridNum, function<void()> onMoved, const float ratio = 1.0f);
-    void moveBy(const vector<Direction>& directions, const int gridNum, function<void()> onMoved, const float ratio = 1.0f);
-    void moveTo(const Point& destPosition, function<void()> onMoved, const float ratio = 1.0f);
+    // move
+    bool moveBy(const Direction& direction, function<void()> onMoved, const float ratio = 1.0f);
+    bool moveBy(const vector<Direction>& directions, function<void()> onMoved, const float ratio = 1.0f);
+    void moveBy(const Direction& direction, const int gridNum, function<void(bool)> onMoved, const float ratio = 1.0f);
+    void moveBy(const vector<Direction>& directions, const int gridNum, function<void(bool)> onMoved, const float ratio = 1.0f);
+    void moveByQueue(deque<vector<Direction>> directionsQueue, function<void(bool)> callback, const float ratio = 1.0f);
+    void clearDirectionsQueue();
+    
+    // イベント関数
+    virtual void onEnterMap() {};                               // マップに追加された時
 
     void drawDebugMask(); // デバッグ用マスク
 };

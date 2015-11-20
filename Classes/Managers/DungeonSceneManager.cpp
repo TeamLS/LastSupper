@@ -56,11 +56,6 @@ DungeonSceneManager::DungeonSceneManager()
     EventScriptValidator* scriptValidator {EventScriptValidator::create()};
     CC_SAFE_RETAIN(scriptValidator);
     this->scriprtValidator = scriptValidator;
-    
-    // パーティを生成
-    Party* party { Party::create(Character::create(0, Direction::FRONT)) };
-    CC_SAFE_RETAIN(party);
-    this->party = party;
 };
 
 // デストラクタ
@@ -70,7 +65,6 @@ DungeonSceneManager::~DungeonSceneManager()
 
     CC_SAFE_RELEASE_NULL(this->eventFactory);
     CC_SAFE_RELEASE_NULL(this->scriprtValidator);
-    CC_SAFE_RELEASE_NULL(this->party);
 };
 
 #pragma mark -
@@ -115,7 +109,7 @@ EventScriptValidator* DungeonSceneManager::getScriptValidator() const
 // パーティを取得
 Party* DungeonSceneManager::getParty() const
 {
-    return this->party;
+    return this->getScene()->party;
 }
 
 #pragma mark -
@@ -169,13 +163,8 @@ void DungeonSceneManager::addMapObject(MapObject* mapObject)
 #pragma mark Director
 
 // マップ切り替え
-void DungeonSceneManager::changeMap(const PlayerDataManager::Location& location)
+void DungeonSceneManager::changeMap(const Location& location)
 {
-    for(Character* member : this->party->getMembers())
-    {
-        member->setParent(nullptr);
-    }
-    
     PlayerDataManager::getInstance()->setLocation(location);
     
     // 必要な情報を設定していく
@@ -190,18 +179,6 @@ void DungeonSceneManager::changeMap(const PlayerDataManager::Location& location)
 
 #pragma mark -
 #pragma mark EventListener
-
-// インターバルを設定
-void DungeonSceneManager::setInputCheckInterval(const float interval)
-{
-    this->getScene()->listener->setInputCheckInterval(interval);
-}
-
-// コールバックを呼び出しの有無を設定
-void DungeonSceneManager::setEventListenerPaused(const bool paused)
-{
-    this->getScene()->listener->setPaused(paused);
-}
 
 // 指定キーが押されているかチェック
 bool DungeonSceneManager::isPressed(const Key& key)
@@ -236,6 +213,18 @@ void DungeonSceneManager::pushEventFront(const int eventId)
     this->getScene()->eventTask->pushEventFront(eventId);
 }
 
+// キューにイベントを後ろから詰める
+void DungeonSceneManager::pushEventBack(GameEvent* event)
+{
+    this->getScene()->eventTask->pushEventBack(event);
+}
+
+// キューにイベントを前から詰める
+void DungeonSceneManager::pushEventFront(GameEvent* event)
+{
+    this->getScene()->eventTask->pushEventFront(event);
+}
+
 // キューにあるイベントを実行
 void DungeonSceneManager::runEventQueue()
 {
@@ -259,5 +248,5 @@ int DungeonSceneManager::getRunningEventId() const
 
 void DungeonSceneManager::setPlayerControlEnable(bool enable)
 {
-    this->getScene()->playerControlTask->setControlEnable(enable);
+    this->getScene()->playerControlTask->setControlEnable(enable, this->getScene()->party);
 }
