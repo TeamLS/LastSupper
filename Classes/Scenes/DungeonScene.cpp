@@ -17,8 +17,9 @@
 #include "Layers/EventListener/EventListenerKeyboardLayer.h"
 #include "Layers/LoadingLayer.h"
 
-#include "Tasks/EventTask.h"
+#include "Tasks/EnemyTask.h"
 #include "Tasks/CameraTask.h"
+#include "Tasks/EventTask.h"
 #include "Tasks/PlayerControlTask.h"
 
 #include "MapObjects/MapObjectList.h"
@@ -27,37 +28,33 @@
 
 #include "Managers/DungeonSceneManager.h"
 
-#include "Event/EventScript.h"
-
 // コンストラクタ
-DungeonScene::DungeonScene():fu(FileUtils::getInstance()){FUNCLOG}
+DungeonScene::DungeonScene() {FUNCLOG}
 
 // デストラクタ
-DungeonScene::~DungeonScene() {FUNCLOG}
+DungeonScene::~DungeonScene()
+{
+    FUNCLOG
+
+    CC_SAFE_RELEASE_NULL(this->party);
+}
 
 // 初期化
 bool DungeonScene::init(DungeonSceneData* data)
 {
-    if(!Scene::init()) return false;
-    
-    // データクラスをセットしretain
-    this->data = data;
-    CC_SAFE_RETAIN(this->data);
-    
-    // ロード画面レイヤ
-    LoadingLayer* loadingLayer = LoadingLayer::create();
-    loadingLayer->setLocalZOrder(Priority::LOADING_LAYER);
-    this->addChild(loadingLayer);
-    this->loadingLayer = loadingLayer;
-    
-    // プリロード開始
-    this->data->preloadResources([=](float percentage){if(percentage == 1.f) this->runAction(Sequence::createWithTwoActions(DelayTime::create(1.f), CallFunc::create([this]{this->onPreloadFinished();})));});
+    if(!BaseScene::init(data)) return false;
     
     return true;
 }
 
+// シーン切り替え終了時
+void DungeonScene::onEnter()
+{
+    BaseScene::onEnter();
+}
+
 // リソースプリロード完了時の処理
-void DungeonScene::onPreloadFinished()
+void DungeonScene::onPreloadFinished(LoadingLayer* loadingLayer)
 {
 	// マップレイヤーを生成
 	TiledMapLayer* mapLayer {TiledMapLayer::create(PlayerDataManager::getInstance()->getLocation())};
@@ -65,11 +62,23 @@ void DungeonScene::onPreloadFinished()
 	this->addChild(mapLayer);
 	this->mapLayer = mapLayer;
     
+    // 主人公一行を生成
+    Party* party { this->createParty() };
+    this->party = party;
+    
+    // 主人公一行をマップに配置
+    mapLayer->setParty(party);
+    
     // 環境光レイヤー生成
     AmbientLightLayer* ambientLightLayer {AmbientLightLayer::create(AmbientLightLayer::NIGHT)};
     ambientLightLayer->setLocalZOrder(Priority::AMBIENT_LIGHT);
     this->addChild(ambientLightLayer);
     this->ambientLightLayer = ambientLightLayer;
+    
+    // 敵処理クラス生成
+    EnemyTask* enemyTask { EnemyTask::create() };
+    this->addChild(enemyTask);
+    this->enemyTask = enemyTask;
     
     // カメラ処理クラス生成
     CameraTask* cameraTask {CameraTask::create()};
@@ -86,18 +95,6 @@ void DungeonScene::onPreloadFinished()
     this->addChild(playerControlTask);
     this->playerControlTask = playerControlTask;
     
-    // パーティーのキャラクタを生成しなおす
-    // NOTICE: 一時的に。本当はPlayerDatamanagerにキャラクタIDなどを保持しておいて、Partyインスタンス自体を生成し直すほうがよい
-    Party* party { DungeonSceneManager::getInstance()->getParty() };
-    party->reload();
-    
-    // パーティーをマップに配置
-    PlayerDataManager::Location location { this->getData()->getInitialLocation() };
-    for(Character* character : party->getMembers())
-    {
-        mapLayer->addMapObject(character, Point(location.x, location.y));
-    }
-    
     // イベントリスナ生成
     EventListenerKeyboardLayer* listener { EventListenerKeyboardLayer::create() };
     listener->onCursorKeyPressed = [playerControlTask, party](const Key& key){playerControlTask->turn(key, party);};
@@ -108,34 +105,52 @@ void DungeonScene::onPreloadFinished()
     this->listener = listener;
     
     // Trigger::INITを実行
-    eventTask->runEvent(mapLayer->getMapObjectList()->getEventIds(Trigger::INIT), CC_CALLBACK_0(DungeonScene::onInitEventFinished, this));
+    eventTask->runEvent(mapLayer->getMapObjectList()->getEventIds(Trigger::INIT), [this, loadingLayer](){this->onInitEventFinished(loadingLayer);});
 }
 
 // Trigger::INITのイベント実行後
-void DungeonScene::onInitEventFinished()
+void DungeonScene::onInitEventFinished(LoadingLayer* loadingLayer)
 {
-    DungeonSceneManager::getInstance()->getParty()->getMainCharacter()->setLight(Light::create(Light::Information(20)), ambientLightLayer);
-    cameraTask->setTarget( DungeonSceneManager::getInstance()->getParty()->getMainCharacter() );
+    this->party->getMainCharacter()->setLight(Light::create(Light::Information(20)), ambientLightLayer);
+    cameraTask->setTarget( this->party->getMainCharacter() );
     
-    // ローディングレイヤを消す
-    this->loadingLayer->loadFinished();
+    this->enemyTask->start(PlayerDataManager::getInstance()->getLocation().map_id);
+    
+    // ローディング終了
+    loadingLayer->onLoadFinished();
     
     // Trigger::AFTER_INITを実行
-    this->eventTask->runEvent(mapLayer->getMapObjectList()->getEventIds(Trigger::AFTER_INIT));
+    this->eventTask->runEvent(this->mapLayer->getMapObjectList()->getEventIds(Trigger::AFTER_INIT), CC_CALLBACK_0(DungeonScene::onAfterInitEventFinished, this));
+}
+
+// Trigger::AFTER_INITのイベント終了時
+void DungeonScene::onAfterInitEventFinished()
+{
+    this->eventTask->runEvent(this->getData()->getInitialEventId());
+}
+
+// 主人公一行を生成
+Party* DungeonScene::createParty()
+{
+    Party* party { Party::create(PlayerDataManager::getInstance()->getPartyMemberAll()) };
+    CC_SAFE_RETAIN(party);
+    
+    return party;
 }
 
 // メニューキー押したとき
 void DungeonScene::onMenuKeyPressed()
 {
     this->listener->setEnabled(false);
+    DungeonSceneManager::getInstance()->pauseStopWatch(); // カウントダウンしてれば停止
     // 主人公の位置をセット
-    Character* chara = DungeonSceneManager::getInstance()->getParty()->getMainCharacter();
+    Character* chara = this->party->getMainCharacter();
     Point point = chara->getGridPosition();
     Direction dir = chara->getDirection();
-    PlayerDataManager::Location location{PlayerDataManager::getInstance()->getLocation().map_id, static_cast<int>(point.x), static_cast<int>(point.y), dir};
+    Location location{PlayerDataManager::getInstance()->getLocation().map_id, static_cast<int>(point.x), static_cast<int>(point.y), dir};
     PlayerDataManager::getInstance()->setLocation(location);
     // スクショをとって、ダンジョンメニューシーンをプッシュ
-    string path = LastSupper::StringUtils::strReplace("global.json", "screen0.png", fu->FileUtils::fullPathForFilename("save/global.json"));
+    string path = LastSupper::StringUtils::strReplace("global.json", "screen0.png", FileUtils::getInstance()->fullPathForFilename("save/global.json"));
     utils::captureScreen([=](bool success, string filename){
      if(success)
      {

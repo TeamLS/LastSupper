@@ -25,10 +25,12 @@ private:
     virtual void onIndexChanged(int newIdx, bool sound);
     virtual void onSpacePressed(int idx);
     virtual void onMenuKeyPressed();
+    virtual void onPageChanged(const int page) override;
     void changeItemDiscription(const int idx);
     void createMiniSelector();
     void onMiniSelectorCanceled();
     void onMiniIndexSelected(const int idx);
+    void moveUpDown(Node* target);
 protected:
     ItemMenuLayer();
     ~ItemMenuLayer();

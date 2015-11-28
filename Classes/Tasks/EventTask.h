@@ -27,25 +27,32 @@ public:
 private:
     deque<EventWithId> eventQueue {};
     EventWithId runningEvent {EventWithId({static_cast<int>(EventID::UNDIFINED), nullptr})};
-    
     CallbackWithId callbackInfo {CallbackWithId({static_cast<int>(EventID::UNDIFINED), nullptr})};
+    int pushingEventId {etoi(EventID::UNDIFINED)};
     
 // インスタンスメソッド
 public:
     // 実行
     void runEventQueue();
 	void runEvent(int eventId);
-    void runEvent(vector<int> eventIds, function<void()> callback);
-    void runEvent(vector<int> eventIds);
+    void runEvent(vector<int> eventIds, function<void()> callback = nullptr);
+    void runEvent(GameEvent* event, function<void()> callback = nullptr);
     
     // キュー操作
     bool pushEventBack(int eventId);
     bool pushEventFront(int eventId);
+    void pushEventBack(GameEvent* event);
+    void pushEventFront(GameEvent* event);
 
     bool isEventRunning();
     bool existsEvent();
     int getRunningEventId() const;
     deque<EventWithId> getEvents() const;
+    
+    // キュー中のevent_id操作
+    int getPushingEventId() const;
+    void setPushingEventId(const int event_id);
+    void resetPushingEventId();
     
     void update(float delta);
 private:

@@ -9,14 +9,14 @@
 #ifndef __LastSupper__DungeonMenuScene__
 #define __LastSupper__DungeonMenuScene__
 
-#include "Scenes/baseScene.h"
+#include "Scenes/BaseScene.h"
 
 class DungeonMainMenuLayer;
 class SaveDataSelector;
 class ItemMenuLayer;
 class CharacterMenuLayer;
 
-class DungeonMenuScene : public baseScene
+class DungeonMenuScene : public BaseScene
 {
 // クラスメソッド
 public:
@@ -46,10 +46,11 @@ private:
     DungeonMenuScene();
     ~DungeonMenuScene();
     bool init(Texture2D* screen, function<void()> onPopMenuScene);
-    virtual void onPreloadFinished() override;
-    virtual void onCursorKeyPressed(const Key& key) override;
-    virtual void onSpaceKeyPressed() override;
-    virtual void onMenuKeyPressed() override;
+    virtual void onEnter() override { Scene::onEnter();};
+    virtual void onPreloadFinished(LoadingLayer* loadingLayer) override;
+    virtual void onCursorKeyPressed(const Key& key);
+    virtual void onSpaceKeyPressed();
+    virtual void onMenuKeyPressed();
     virtual void intervalInputCheck(const vector<Key>& keys);
     void createMainMenu();
     void createSaveMenu();

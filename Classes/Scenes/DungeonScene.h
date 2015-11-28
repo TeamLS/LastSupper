@@ -9,50 +9,56 @@
 #ifndef __DUNGEON_SCENE_H__
 #define __DUNGEON_SCENE_H__
 
-#include "Scenes/baseScene.h"
+#include "Scenes/BaseScene.h"
 
 class AmbientLightLayer;
 class TiledMapLayer;
 class DungeonSceneData;
-class EventScript;
 
 class CameraTask;
+class EnemyTask;
 class EventTask;
 class PlayerControlTask;
 
 class LoadingLayer;
+class Party;
 
-class DungeonScene : public baseScene
+class DungeonScene : public BaseScene
 {
 // クラスメソッド
 public:
 	CREATE_FUNC_WITH_PARAM(DungeonScene, DungeonSceneData*);
 	
 // インスタンス変数
-private:
+protected:
     EventListenerKeyboardLayer* listener { nullptr };
-    cocos2d::FileUtils* fu;
     TiledMapLayer* mapLayer { nullptr };
     AmbientLightLayer* ambientLightLayer {nullptr};
     
     CameraTask* cameraTask { nullptr };
+    EnemyTask* enemyTask { nullptr };
     EventTask* eventTask { nullptr };
     PlayerControlTask* playerControlTask { nullptr };
     
     LoadingLayer* loadingLayer { nullptr };
-    Sprite* cover { nullptr };
+    
+    Party* party { nullptr };
     
 // インスタンスメソッド
-public:
-    void onInitEventFinished();
+protected:
+    DungeonScene();
+    ~DungeonScene();
     
 private:
-	DungeonScene();
-	~DungeonScene();
 	virtual bool init(DungeonSceneData* data);
-	virtual void onPreloadFinished() override;
+    virtual void onEnter() override;
+	virtual void onPreloadFinished(LoadingLayer* loadingLayer) override;
+    virtual void onInitEventFinished(LoadingLayer* loadingLayer);
+    virtual void onAfterInitEventFinished();
     
-    virtual void onMenuKeyPressed() override;
+    Party* createParty();
+    
+    virtual void onMenuKeyPressed();
     DungeonSceneData* getData() const;
     
     void runEvent(const int eventId);

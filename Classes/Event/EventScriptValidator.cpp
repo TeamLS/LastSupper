@@ -103,7 +103,7 @@ bool EventScriptValidator::detectEventFlg(rapidjson::Value& json, bool negative)
     {
         for(int i { 0 }; i < json.Size(); i++)
         {
-            detection = PlayerDataManager::getInstance()->getEventFlag(stoi(json[i][0].GetString()), stoi(json[i][1].GetString()));
+            detection = PlayerDataManager::getInstance()->checkEventIsDone(stoi(json[i][0].GetString()), stoi(json[i][1].GetString()));
             if(negative) detection = !detection;
             if(!detection) return false;
         }
@@ -112,7 +112,7 @@ bool EventScriptValidator::detectEventFlg(rapidjson::Value& json, bool negative)
     //一つのイベントの場合
     else
     {
-        detection = PlayerDataManager::getInstance()->getEventFlag(stoi(json[0].GetString()), stoi(json[1].GetString()));
+        detection = PlayerDataManager::getInstance()->checkEventIsDone(stoi(json[0].GetString()), stoi(json[1].GetString()));
         if(negative) detection = !detection;
     }
     
@@ -122,7 +122,17 @@ bool EventScriptValidator::detectEventFlg(rapidjson::Value& json, bool negative)
 // フラグの確認
 bool EventScriptValidator::detectFlg(rapidjson::Value& json, bool negative)
 {
-    return false;
+    bool detection { false };
+    
+    // 現在のmap_idとevent_idを取得
+    int map_id {PlayerDataManager::getInstance()->getLocation().map_id};
+    int event_id {DungeonSceneManager::getInstance()->getPushingEventid()};
+    
+    // 一つのイベントに対してステータスを確認
+    detection = PlayerDataManager::getInstance()->checkEventStatus(map_id, event_id, json.GetInt());
+    if(negative) detection = !detection;
+    
+    return detection;
 }
 
 // アイテム所持の確認
@@ -205,4 +215,10 @@ Direction EventScriptValidator::getDirection(rapidjson::Value& json)
     if(!this->hasMember(json, member::DIRECTION)) return Direction::SIZE;
     
     return MapUtils::toEnumDirection(json[member::DIRECTION].GetString());
+}
+
+// 敵の移動アルゴリズムの種類を取得
+EnemyMovePattern EventScriptValidator::getMovePatternForEnemy(rapidjson::Value& json)
+{
+    return static_cast<EnemyMovePattern>(json[member::MOVE_PATTERN].GetInt());
 }

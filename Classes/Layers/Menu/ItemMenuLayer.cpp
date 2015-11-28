@@ -10,6 +10,7 @@
 #include "Layers/EventListener/EventListenerKeyboardLayer.h"
 #include "Scenes/DungeonScene.h"
 #include "Layers/Menu/MiniSelector.h"
+#include "UI/NotificationBand.h"
 
 // コンストラクタ
 ItemMenuLayer::ItemMenuLayer(){FUNCLOG}
@@ -21,14 +22,18 @@ ItemMenuLayer::~ItemMenuLayer(){FUNCLOG}
 bool ItemMenuLayer::init()
 {
     FUNCLOG
+    // メニュー設定
     int obj_count = PlayerDataManager::getInstance()->getItemAll().size();
-    Point maxSize = Point(3,8);
+    Point maxSize = Point(3,6);
     int sizeX = obj_count < maxSize.x ? obj_count : maxSize.x;
-    int sizeY = obj_count < 16 ? floor((obj_count - 1 )/ 3) + 1 : maxSize.y;
-    if (!MenuLayer::init(sizeX, sizeY)) return false;
+    int sizeY = obj_count < maxSize.x * maxSize.y ? floor((obj_count - 1 )/ maxSize.x) + 1 : maxSize.y;
+    Size size = Size(sizeX, sizeY);
+    int page_size = floor(obj_count / (maxSize.x * maxSize.y)) + 1;
+    if (!MenuLayer::init(size, page_size)) return false;
     
     SpriteUtils::Square square;
     SpriteUtils::Margin margin;
+    Size parcent = Size(WINDOW_WIDTH/100, WINDOW_HEIGHT/100);
     
     // 白い背景を生成
     Sprite* white = Sprite::create();
@@ -39,10 +44,12 @@ bool ItemMenuLayer::init()
     this->addChild(white);
     
     // タイトル
-    square = SpriteUtils::Square(0,80,30,100);
-    margin = SpriteUtils::Margin(3.0,1.5,1.5,3.0);
-    Sprite* leftTop = SpriteUtils::getSquareSprite(square, margin);
-    leftTop->setColor(Color3B(128,0,0));
+    //square = SpriteUtils::Square(0,80,30,100);
+    //margin = SpriteUtils::Margin(3.0,1.5,1.5,3.0);
+    //Sprite* leftTop = SpriteUtils::getSquareSprite(square, margin);
+    //leftTop->setColor(Color3B(128,0,0));
+    Sprite* leftTop {Sprite::createWithSpriteFrameName("menu_title_panel.png")};
+    leftTop->setPosition(leftTop->getContentSize().width/2, WINDOW_HEIGHT - leftTop->getContentSize().height/2);
     this->addChild(leftTop);
     
     Label* title = Label::createWithTTF("アイテム", "fonts/cinecaption2.28.ttf", 48);
@@ -51,18 +58,22 @@ bool ItemMenuLayer::init()
     leftTop->addChild(title);
     
     // アイテム詳細
-    square = SpriteUtils::Square(0,0,100,25);
-    margin = SpriteUtils::Margin(1.5,3.0,3.0,3.0);
-    Sprite* bottom = SpriteUtils::getSquareSprite(square, margin);
-    bottom->setColor(Color3B::BLACK);
+    //square = SpriteUtils::Square(0,0,100,25);
+    //margin = SpriteUtils::Margin(1.5,3.0,3.0,3.0);
+    //Sprite* bottom = SpriteUtils::getSquareSprite(square, margin);
+    //bottom->setColor(Color3B::BLACK);
+    Sprite* bottom {Sprite::createWithSpriteFrameName("item_detail.png")};
+    bottom->setPosition(bottom->getContentSize().width/2, bottom->getContentSize().height/2);
     bottom->setName("bottom");
     this->addChild(bottom);
     
     // 装備
-    square = SpriteUtils::Square(30,80,100,100);
-    margin = SpriteUtils::Margin(3.0,3.0,1.5,1.5);
-    Sprite* rightTop = SpriteUtils::getSquareSprite(square, margin);
-    rightTop->setColor(Color3B::BLACK);
+    //square = SpriteUtils::Square(30,80,100,100);
+    //margin = SpriteUtils::Margin(3.0,3.0,1.5,1.5);
+    //Sprite* rightTop = SpriteUtils::getSquareSprite(square, margin);
+    //rightTop->setColor(Color3B::BLACK);
+    Sprite* rightTop {Sprite::createWithSpriteFrameName("item_equipment.png")};
+    rightTop->setPosition(rightTop->getContentSize().width/2 + parcent.width * 30, rightTop->getContentSize().height/2 + parcent.height * 80);
     this->addChild(rightTop);
     
     int right_id = PlayerDataManager::getInstance()->getItemEquipment(Direction::RIGHT);
@@ -70,19 +81,24 @@ bool ItemMenuLayer::init()
     string right_equip = (right_id != 0) ? CsvDataManager::getInstance()->getItemName(right_id) : "なし";
     string left_equip = (left_id != 0) ? CsvDataManager::getInstance()->getItemName(left_id) : "なし";
     Label* equip_title = Label::createWithTTF("装備", "fonts/cinecaption2.28.ttf", 26);
-    equip_title->setPosition(equip_title->getContentSize().width/2 + 30, rightTop->getContentSize().height - equip_title->getContentSize().height/2 - 10);
+    equip_title->setPosition(equip_title->getContentSize().width/2 + 30, rightTop->getContentSize().height - equip_title->getContentSize().height/2 - 15);
     equip_title->setColor(Color3B::WHITE);
     rightTop->addChild(equip_title);
     Label* equipment = Label::createWithTTF("右手 : " + right_equip + "\n左手 : " + left_equip, "fonts/cinecaption2.28.ttf", 26);
-    equipment->setPosition(equipment->getContentSize().width/2 + 10, equipment->getContentSize().height/2 + 15);
+    equipment->setPosition(equipment->getContentSize().width/2 + 20, equipment->getContentSize().height/2 + 20);
     equipment->setColor(Color3B::WHITE);
     rightTop->addChild(equipment);
     
     // アイテムリスト
     square = SpriteUtils::Square(0,25,100,80);
-    margin = SpriteUtils::Margin(1.5,3.0,1.5,3.0);
+    //margin = SpriteUtils::Margin(1.5,3.0,1.5,3.0);
+    margin = SpriteUtils::Margin(0);
     Sprite* center = SpriteUtils::getSquareSprite(square, margin);
     center->setColor(Color3B::BLACK);
+    //Sprite* center {Sprite::createWithSpriteFrameName("item_selector.png")};
+    //center->setPosition(center->getContentSize().width/2, center->getContentSize().height/2 + parcent.height * 25);
+    center->setName("itemList");
+    CC_SAFE_RETAIN(center);
     this->addChild(center);
     
     map<int,int> items = PlayerDataManager::getInstance()->getItemAll();
@@ -91,34 +107,57 @@ bool ItemMenuLayer::init()
         items.insert({-1,0});
     }
     int i = 0;
+    int page = 0;
+    int upDownMargin = 40;
+    Size centerSize {center->getContentSize()};
     for(auto itr = items.begin(); itr != items.end(); itr++)
     {
+        // ページパネル生成
+        page = floor(i / (maxSize.x * maxSize.y));
+        if (this->pagePanels.size() < page + 1)
+        {
+            Sprite* page_panel = Sprite::create();
+            page_panel->setTextureRect(Rect(0,0,centerSize.width, centerSize.height));
+            page_panel->setPosition(page_panel->getContentSize().width/2, page_panel->getContentSize().height/2);
+            page_panel->setOpacity(0);
+            page_panel->setName("pagePanel");
+            CC_SAFE_RETAIN(page_panel);
+            this->pagePanels.push_back(page_panel);
+        }
+        
         // パネル生成
         Sprite* panel = Sprite::create();
-        Size list_size {center->getContentSize()};
+        Size list_size {this->pagePanels[page]->getContentSize()};
+        list_size.height -= upDownMargin;
         panel->setTextureRect(Rect(0, 0, list_size.width / maxSize.x, list_size.height / maxSize.y));
-        panel->setColor(Color3B::BLACK);
-        panel->setTag(i);
+        //panel->setColor(Color3B::BLACK);
+        panel->setOpacity(0);
+        
         Size panel_size {panel->getContentSize()};
-        panel->setPosition((i%(int)maxSize.x) * (list_size.width / maxSize.x) + panel_size.width/2, list_size.height - ((floor(i/(int)maxSize.x) + 1)  *  (panel_size.height)) + panel_size.height/2);
-        center->addChild(panel);
-        // メニューオブジェクトに登録
-        this->menuObjects.push_back(panel);
-        // 不透明度を半分にしておく
-        panel->setCascadeOpacityEnabled(true);
-        panel->setOpacity(100);
+        panel->setPosition(((i - (int)(page * maxSize.x * maxSize.y))%(int)maxSize.x) * (list_size.width / maxSize.x) + panel_size.width/2, list_size.height - ((floor((i - page * maxSize.x * maxSize.y)/(int)maxSize.x) + 1)  *  (panel_size.height)) + panel_size.height/2 + upDownMargin/2);
+        
+        // ページ登録
+        this->pagePanels[page]->addChild(panel);
         
         // アイテム
         this->items.push_back(itr->first);
-        Label* item = Label::createWithTTF(CsvDataManager::getInstance()->getItemName(itr->first), "fonts/cinecaption2.28.ttf", 24);
-        item->setPosition(panel_size.width/2 , panel_size.height / 2);
+        Label* item = Label::createWithTTF(CsvDataManager::getInstance()->getItemName(itr->first), "fonts/cinecaption2.28.ttf", 22);
+        item->setPosition(panel_size.width/2 , panel_size.height/2);
         item->setColor(Color3B::WHITE);
+        item->setTag(i);
+        // 不透明度を半分にしておく
+        item->setCascadeOpacityEnabled(true);
+        item->setOpacity(100);
         panel->addChild(item);
+        
+        // メニューオブジェクト登録
+        this->menuObjects.push_back(item);
+        
         // インクリメント
         i++;
     }
-    
     // デフォルトセレクト
+    this->onPageChanged(0);
     this->onIndexChanged(0, false);
     
     return true;
@@ -137,7 +176,7 @@ void ItemMenuLayer::changeItemDiscription(const int idx)
     string str = LastSupper::StringUtils::strReplace("\\n", "\n", CsvDataManager::getInstance()->getItemDiscription(this->items[idx]));
     Label* discription = Label::createWithTTF(str, "fonts/cinecaption2.28.ttf", 24);
     //discription->setPosition(bottom->getContentSize().width / 2, leftBottom->getContentSize().height / 2);
-    int margin = 10;
+    int margin = 15;
     discription->setPosition(discription->getContentSize().width / 2 + margin, bottom->getContentSize().height - discription->getContentSize().height / 2 - margin);
     discription->setColor(Color3B::WHITE);
     discription->setName(labelName);
@@ -162,7 +201,7 @@ void ItemMenuLayer::createMiniSelector()
         this->isEquip = false;
     }
     Point index = Point(1,labels.size()); // 要素数
-    SpriteUtils::Square position = SpriteUtils::Square(76,80,100,100); // 位置
+    SpriteUtils::Square position = SpriteUtils::Square(74,2.5,98,22.5); // 位置
     MiniSelector::Selector selector = MiniSelector::Selector(index, position, labels);
     MiniSelector* mini = {MiniSelector::create(selector)};
     this->addChild(mini);
@@ -216,17 +255,10 @@ void ItemMenuLayer::onMiniIndexSelected(const int idx)
     }
     
     // 完了メッセージ表示帯
-    Sprite* back = Sprite::create();
-    back->setTextureRect(Rect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT/4));
-    back->setColor(Color3B::GRAY);
-    back->setPosition(WINDOW_CENTER);
-    this->addChild(back);
-    
-    // 完了メッセージラベル
     string equipMsg = this->isEquip ? "装備しました" : "外しました";
-    Label* message = Label::createWithTTF(CsvDataManager::getInstance()->getItemName(this->selected_item) + "を\n" + equipMsg, "fonts/cinecaption2.28.ttf", back->getContentSize().height / 5);
-    message->setPosition(Point(message->getContentSize().width / 2 + (WINDOW_WIDTH - message->getContentSize().width)/2, back->getContentSize().height / 2));
-    back->addChild(message);
+    NotificationBand* notification = NotificationBand::create(CsvDataManager::getInstance()->getItemName(this->selected_item) + "を\n" + equipMsg);
+    notification->setBandColor(Color3B(64,0,0));
+    this->addChild(notification);
     this->miniSelector->confirm_flag = true;
 }
 
@@ -248,6 +280,8 @@ void ItemMenuLayer::onMiniSelectorCanceled()
 // 表示
 void ItemMenuLayer::show()
 {
+    this->setScale(0);
+    this->runAction(EaseCubicActionOut::create(ScaleTo::create(0.3f, 1.f)));
     this->listenerKeyboard->setEnabled(true);
     this->setVisible(true);
 }
@@ -256,7 +290,8 @@ void ItemMenuLayer::show()
 void ItemMenuLayer::hide()
 {
     this->listenerKeyboard->setEnabled(false);
-    this->setVisible(false);
+    this->runAction(EaseCubicActionOut::create(ScaleTo::create(0.3f, 0)));
+    //this->setVisible(false);
 }
 
 // 戻る
@@ -265,6 +300,12 @@ void ItemMenuLayer::onMenuKeyPressed()
     FUNCLOG
     if(this->onItemMenuCanceled)
     {
+        CC_SAFE_RELEASE(this->getChildByName("itemList"));
+        int size = this->pagePanels.size();
+        for (int i = 0; i < size; i++)
+        {
+            CC_SAFE_RELEASE(this->pagePanels[i]);
+        }
         this->onItemMenuCanceled();
     }
 }
@@ -288,21 +329,106 @@ void ItemMenuLayer::onSpacePressed(int idx)
 // 選択対象が変わった時
 void ItemMenuLayer::onIndexChanged(int newIdx, bool sound)
 {
+    // カーソル音
     if (sound)
     {
         SoundManager::getInstance()->playSE("cursorMove.mp3");
     }
+    
+    // カーソル処理
     for(Node* obj : this->menuObjects)
     {
         if(obj->getTag() == newIdx)
         {
-            obj->runAction(FadeTo::create(0.2f, 255));
+            obj->runAction(FadeTo::create(0.1f, 255));
+            obj->runAction(ScaleTo::create(0.2f, 1.1f));
         }
         else
         {
-            obj->runAction(FadeTo::create(0.2f, 100));
+            obj->runAction(FadeTo::create(0.1f, 120));
+            obj->runAction(ScaleTo::create(0.2f, 1.0f));
         }
     }
     // アイテム詳細を更新
     this->changeItemDiscription(newIdx);
+}
+
+// ページが変わった時
+void ItemMenuLayer::onPageChanged(const int page)
+{
+    FUNCLOG
+    //　ページ処理
+    Node * itemList = this->getChildByName("itemList");
+    itemList->removeChildByName("pagePanel");
+    itemList->addChild(this->pagePanels[page]);
+    int page_size = this->getPageSize();
+    Size list_size = itemList->getContentSize();
+    
+    // ページカウンター
+    if (itemList->getChildByName("counter"))
+    {
+        itemList->removeChildByName("counter");
+    }
+    if (page_size > 1)
+    {
+        Label* counter = Label::createWithTTF(to_string(page+1) + "/" + to_string(page_size), "fonts/cinecaption2.28.ttf", 20);
+        counter->setPosition(counter->getContentSize().width/2 + 5 , counter->getContentSize().height/2 + 5);
+        counter->setColor(Color3B::WHITE);
+        counter->setName("counter");
+        itemList->addChild(counter);
+    }
+    
+    // 下への矢印
+    if (itemList->getChildByName("downPager"))
+    {
+        itemList->removeChildByName("downPager");
+    }
+    if (page + 1 != page_size)
+    {
+        Label* downPager = Label::createWithTTF("▼", "fonts/cinecaption2.28.ttf", 16);
+        downPager->setPosition(list_size.width/2 , downPager->getContentSize().height / 2 + 5);
+        downPager->setColor(Color3B::WHITE);
+        downPager->setName("downPager");
+        itemList->addChild(downPager);
+        
+        // アクション生成
+        this->moveUpDown(downPager);
+    }
+    
+    // 上への矢印
+    if (itemList->getChildByName("upPager"))
+    {
+        itemList->removeChildByName("upPager");
+    }
+    if (page != 0)
+    {
+        Label* upPager = Label::createWithTTF("▲", "fonts/cinecaption2.28.ttf", 16);
+        upPager->setPosition(list_size.width/2 , list_size.height - upPager->getContentSize().height / 2 - 10);
+        upPager->setColor(Color3B::WHITE);
+        upPager->setName("upPager");
+        itemList->addChild(upPager);
+        
+        // アクション生成
+        this->moveUpDown(upPager);
+    }
+}
+
+// 上下に反復移動
+void ItemMenuLayer::moveUpDown(cocos2d::Node* target)
+{
+    // 移動設定
+    float time = 0.3f;
+    float distance = 5.f;
+    
+    // 初期位置の取得
+    Vec2 position = target->getPosition();
+    
+    // 反復移動位置を設定
+    ActionInterval* upDown = Sequence::createWithTwoActions(
+        TargetedAction::create(target, MoveTo::create(time, Vec2(position.x, position.y + distance))),
+        TargetedAction::create(target, MoveTo::create(time, position))
+    );
+    
+    // 反復移動を登録
+    this->runAction(RepeatForever::create(upDown));
 }

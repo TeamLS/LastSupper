@@ -1,3 +1,4 @@
+
 //
 //  PlayerDataManager.cpp
 //  LastSupper
@@ -13,6 +14,8 @@
 #include "Managers/PlayerDataManager.h"
 #include "Managers/CsvDataManager.h"
 #include "Utils/StringUtils.h"
+#include "Datas/MapObject/CharacterData.h"
+#include "Models/StopWatch.h"
 
 #pragma mark Instance
 // 唯一のインスタンスを初期化
@@ -33,13 +36,17 @@ void PlayerDataManager::destroy()
 }
 
 //デストラクタ
-PlayerDataManager::~PlayerDataManager(){FUNCLOG}
+PlayerDataManager::~PlayerDataManager()
+{
+    FUNCLOG
+    CC_SAFE_RELEASE_NULL(this->timer);
+}
 
 
 #pragma mark -
 #pragma mark InitFunctions
 
-//コンストラクタ
+// コンストラクタ
 PlayerDataManager::PlayerDataManager():fu(FileUtils::getInstance())
 {
     FUNCLOG
@@ -51,7 +58,7 @@ PlayerDataManager::PlayerDataManager():fu(FileUtils::getInstance())
     }
 }
 
-//グローバルデータの読み込み
+// グローバルデータの読み込み
 bool PlayerDataManager::setGlobalData()
 {
     FUNCLOG
@@ -72,7 +79,7 @@ bool PlayerDataManager::setGlobalData()
     return true;
 }
 
-//グローバルセーブデータの初期化
+// グローバルセーブデータの初期化
 void PlayerDataManager::initializeFiles()
 {
     FUNCLOG
@@ -103,16 +110,14 @@ void PlayerDataManager::initializeFiles()
 }
 
 #pragma mark -
-#pragma mark NormalFunctions
+#pragma mark SaveDataFunctions
 
-//セーブデータのリスト表示用データ
+// セーブデータのリスト表示用データ
 vector<PlayerDataManager::SaveIndex> PlayerDataManager::getSaveList()
 {
     FUNCLOG
     vector<PlayerDataManager::SaveIndex> save_list;
     SaveIndex save;
-    int sec, min;
-    string time;
     // セーブデータを一つずつチェック
     for(int i=1; i<=MAX_SAVE_COUNT; i++){
         string file = "save/local" + to_string(i) + ".json";
@@ -132,17 +137,12 @@ vector<PlayerDataManager::SaveIndex> PlayerDataManager::getSaveList()
             cout << "set >> " << i << endl;
             this->local_exist[i-1] = true;
             
-            // プレイ時間
-            sec = local["play_time"].GetInt();
-            min = sec / 60;
-            time = LastSupper::StringUtils::getSprintf("%02s", to_string(min/60)) + "h" +LastSupper::StringUtils::getSprintf("%02s", to_string(min)) + "m" + LastSupper::StringUtils::getSprintf("%02s", to_string(sec % 60))+ "s";
-            
             // リスト生成
             save = SaveIndex(
                              i,
                              CsvDataManager::getInstance()->getChapterName(local["chapter"].GetInt()),
-                             LastSupper::StringUtils::getSprintf("%15s", CsvDataManager::getInstance()->getMapName(local["location"][0].GetInt())),
-                             time,
+                             LastSupper::StringUtils::getSprintf("%15s", CsvDataManager::getInstance()->getMapName(local["map_id"].GetInt())),
+                             this->getPlayTimeDisplay(local["play_time"].GetInt()),
                              LastSupper
                              ::StringUtils::getSprintf("%3s", to_string(local["save_count"].GetInt()))
                              );
@@ -161,150 +161,152 @@ void PlayerDataManager::setMainLocalData(const int id)
     string path = this->fu->fullPathForFilename(file);
     this->local = this->readJsonFile(path);
     // プレイ時間計測スタート
-    this->start_time_ms = this->getSec();
+    this->timer = StopWatch::create(this->local["play_time"].GetInt());
+    CC_SAFE_RETAIN(this->timer);
+    this->timer->tic();
     return;
 }
 
 // メインとなるローカルデータのidを取得
 int PlayerDataManager::getSaveDataId()
 {
-    FUNCLOG
     return this->local_id;
 }
 
-// 時間取得
-double PlayerDataManager::getSec(){
-    timeval tv;
-    gettimeofday(&tv, nullptr);
-    return (tv.tv_sec) + (tv.tv_usec) * 1e-6;
-}
-
-// プレイ時間を秒で取得し、スタート時間のリセット
-int PlayerDataManager::getPlayTimeSeconds()
+//　表示用プレイ時間の取得
+string PlayerDataManager::getPlayTimeDisplay(const int sec)
 {
-    // 計測時間の管理
-    double start = this->start_time_ms;
-    double stop = this->getSec();
-    // 計測処理
-    int interval_time = (int)(stop - start);
-    // 開始時間を再設定
-    this->start_time_ms = this->getSec();
-    // プレイ時間を格納
-    return (this->local["play_time"].GetInt() + interval_time);
+    int min = floor(sec / 60);
+    string display = LastSupper::StringUtils::getSprintf("%02s", to_string(min/60)) + "h" +LastSupper::StringUtils::getSprintf("%02s", to_string(min)) + "m" + LastSupper::StringUtils::getSprintf("%02s", to_string(sec % 60))+ "s";
+    return display;
 }
 
-//セーブ
+// セーブ
 void PlayerDataManager::save(const int id)
 {
     FUNCLOG
     // save local
     string str_id = to_string(id);
     this->local["play_time"].SetInt(this->getPlayTimeSeconds());
-    this->local["datetime"].SetInt(this->getSec());
     this->local["save_count"].SetInt(this->local["save_count"].GetInt() + 1);
-    PlayerDataManager::Location loc = this->getLocation();
-    this->local["location"][0].SetInt(loc.map_id);
-    this->local["location"][1].SetInt(loc.x);
-    this->local["location"][2].SetInt(loc.y);
-    this->local["location"][3].SetInt(static_cast<int>(loc.direction));
     string path = "save/local" + str_id + ".json";
     this->writeJsonFile(path, this->local);
     this->local_id = id;
-    // キャプチャースクリーンの保存
-    string path_s = LastSupper::StringUtils::strReplace("global.json", "screen" + to_string(id)+ ".png", fu->FileUtils::fullPathForFilename("save/global.json"));
-    utils::captureScreen([=](bool success, string filename){
-        if(success)
-        {
-            // cache削除
-            Director::getInstance()->getTextureCache()->removeTextureForKey(filename);
-        }
-    }, path_s);
     return;
 }
 
 // セーブデータの存在をチェック
 bool PlayerDataManager::checkSaveDataExists(const int id)
 {
-    FUNCLOG
-    //return (this->fu->isFileExist("save/local" + to_string(id) + ".json")) ? true : false;
     return this->local_exist[id - 1];
 }
 
 #pragma mark -
 #pragma mark Setter
 
-//主人公の座標のセット
-void PlayerDataManager::setLocation(const Location& location)
+// オブジェクトの座標のセット
+void PlayerDataManager::setLocation(const Location& location, const int num)
 {
-    FUNCLOG
-    // 配列を削除
-    this->local["location"].Clear();
-    // 配列をセット
-    this->local["location"].SetArray();
-    this->local["location"].PushBack(location.map_id, this->local.GetAllocator());
-    this->local["location"].PushBack(location.x, this->local.GetAllocator());
-    this->local["location"].PushBack(location.y, this->local.GetAllocator());
-    this->local["location"].PushBack(static_cast<int>(location.direction), this->local.GetAllocator());
+    if (num == 0) this->local["map_id"].SetInt(location.map_id);
+    this->local["party"][num]["x"].SetInt(location.x);
+    this->local["party"][num]["y"].SetInt(location.y);
+    this->local["party"][num]["direction"].SetInt(static_cast<int>(location.direction));
     return;
 }
 
-//友好度のセット
+void PlayerDataManager::setLocation(const CharacterData& character, const int num)
+{
+    this->setLocation(character.location, num);
+}
+
+void PlayerDataManager::setLocation(const vector<CharacterData>& characters)
+{
+    int chara_count = characters.size();
+    for (int i = 0; i < chara_count; i++)
+    {
+        this->setLocation(characters[i], i);
+    }
+}
+
+// 友好度のセット
 void PlayerDataManager::setFriendship(const int chara_id, const int level)
 {
-    FUNCLOG
-    this->local["friendship"][to_string(chara_id).c_str()].SetInt(level);
+    char level_char[2];
+    sprintf(level_char, "%d", level);
+    this->local["friendship"][level_char].SetInt(level);
     return;
 }
 
-//イベントフラグのセット
-void PlayerDataManager::setEventFlag(const int map_id, const int event_id, const bool& flag)
+// イベントフラグのセット (イベントステータスへ変換 true>>1, false>>0)
+void PlayerDataManager::setEventNeverAgain(const int map_id, const int event_id, const bool flag)
 {
-    FUNCLOG
-    const char* mid_char = to_string(map_id).c_str();
-    char buff[50];
-    sprintf(buff, "%d", map_id);
+    // status取得
+    int status {this->getEventStatus(map_id, event_id)};
+    
+    // statusを負の値にする
+    if (status == 0 && flag)
+    {
+        status = -1; // 初回の場合
+    }
+    else if ( (status > 0 && flag) || (status < 0 && !flag) )
+    {
+        status = status * -1;
+    }
+    else
+    {
+        status = 1;
+    }
+    
+    //　イベントステータスとしてセット
+    this->setEventStatus(map_id, event_id, status);
+}
+
+// イベントステータスのセット
+void PlayerDataManager::setEventStatus(const int map_id, const int event_id, const int status)
+{
+    char mid_char[10];
+    sprintf(mid_char, "%d", map_id);
     rapidjson::Value mid  (kStringType);
-    mid.SetString(buff, strlen(buff), this->local.GetAllocator());
+    mid.SetString(mid_char, strlen(mid_char), this->local.GetAllocator());
     
     rapidjson::Value::ConstMemberIterator itr = this->local["event"].FindMember(mid_char);
     //mapが存在するかチェック
     if(itr == this->local["event"].MemberEnd()){
-        this->local["event"].AddMember(mid, rapidjson::Value(), this->local.GetAllocator());
-        this->local["event"][mid_char].SetObject();
+        this->local["event"].AddMember(mid, rapidjson::Value(kObjectType), this->local.GetAllocator());
     }
     //event_idが存在するかチェック
-    const char* id_char = to_string(event_id).c_str();
-    sprintf(buff, "%d", event_id);
-    rapidjson::Value id (kStringType);
-    id.SetString(buff,strlen(buff),this->local.GetAllocator());
-    itr = this->local["event"][mid_char].FindMember(id_char);
+    char eid_char[10];
+    sprintf(eid_char, "%d", event_id);
+    rapidjson::Value eid (kStringType);
+    eid.SetString(eid_char,strlen(eid_char),this->local.GetAllocator());
+    itr = this->local["event"][mid_char].FindMember(eid_char);
     if(itr == this->local["event"][mid_char].MemberEnd()){
-        this->local["event"][mid_char].AddMember(id, rapidjson::Value(flag), this->local.GetAllocator());
+        this->local["event"][mid_char].AddMember(eid, rapidjson::Value(status), this->local.GetAllocator());
     } else {
-        this->local["event"][mid_char][id_char].SetBool(flag);
+        bool negative = itr->value.GetInt() < 0 ? true : false;
+        int new_status = status < 0 ? status : (negative) ? status * -1 : status;
+        this->local["event"][mid_char][eid_char].SetInt(new_status);
     }
     return;
 }
 
-//アイテムゲット時の処理
+// アイテムゲット時の処理
 void PlayerDataManager::setItem(const int item_id)
 {
-    FUNCLOG
-    const char* id_char = to_string(item_id).c_str();
-    char buff[50];
-    sprintf(buff, "%d", item_id);
-    rapidjson::Value id  (kStringType);
-    id.SetString(buff, strlen(buff), this->local.GetAllocator());
+    char iid_char[10];
+    sprintf(iid_char, "%d", item_id);
+    rapidjson::Value iid  (kStringType);
+    iid.SetString(iid_char, strlen(iid_char), this->local.GetAllocator());
     
-    rapidjson::Value::ConstMemberIterator itr = this->local["item"].FindMember(id);
+    rapidjson::Value::ConstMemberIterator itr = this->local["item"].FindMember(iid_char);
     int count = 0;
     if(itr != this->local["item"].MemberEnd()){
         //既にゲットしているアイテムなら個数を+1する
         count = itr->value.GetInt();
-        this->local["item"][id_char].SetInt(count+1);
+        this->local["item"][iid_char].SetInt(count+1);
     } else {
         //初めてゲットしたアイテムならば新しい値をセット
-        this->local["item"].AddMember(id, rapidjson::Value(1), this->local.GetAllocator());
+        this->local["item"].AddMember(iid, rapidjson::Value(1), this->local.GetAllocator());
     }
     return;
 }
@@ -312,7 +314,6 @@ void PlayerDataManager::setItem(const int item_id)
 // アイテム装備時の処理
 void PlayerDataManager::setItemEquipment(Direction direction, const int item_id)
 {
-    FUNCLOG
     if(direction == Direction::LEFT)
     {
         this->local["equipment_left"].SetInt(item_id);
@@ -324,15 +325,59 @@ void PlayerDataManager::setItemEquipment(Direction direction, const int item_id)
     return;
 }
 
-// アイテムを使用して消費する
-bool PlayerDataManager::setItemUsed(const int item_id)
+// chapterを切り替え
+void PlayerDataManager::setChapterId(const int chapter_id)
 {
-    const char* id = to_string(item_id).c_str();
+    this->local["chapter"].SetInt(chapter_id);
+}
+
+// キャラクターのプロフィールを追加
+void PlayerDataManager::setCharacterProfile(const int chara_id, const int level)
+{
+    char cid_char[10];
+    sprintf(cid_char, "%d", chara_id);
+    rapidjson::Value::ConstMemberIterator itr = this->local["chara"].FindMember(cid_char);
+    if (itr != this->local["chara"].MemberEnd())
+    {
+        // すでに追加されているキャラクター
+        this->local["chara"][cid_char].SetInt(level);
+    }
+    else
+    {
+        // 初めて追加するキャラ
+        rapidjson::Value id (kStringType);
+        id.SetString(cid_char,strlen(cid_char),this->local.GetAllocator());
+        this->local["chara"].AddMember(id, rapidjson::Value(level), this->local.GetAllocator());
+    }
+}
+
+// パーティメンバーを追加する
+void PlayerDataManager::setPartyMember(const CharacterData& chara)
+{
+    
+    rapidjson::Document member;
+    member.SetObject();
+    member.AddMember("chara_id", rapidjson::Value(chara.chara_id), this->local.GetAllocator());
+    member.AddMember("obj_id", rapidjson::Value(chara.obj_id), this->local.GetAllocator());
+    member.AddMember("x", rapidjson::Value(chara.location.x), this->local.GetAllocator());
+    member.AddMember("y", rapidjson::Value(chara.location.y), this->local.GetAllocator());
+    member.AddMember("direction", rapidjson::Value(static_cast<int>(chara.location.direction)), this->local.GetAllocator());
+    this->local["party"].PushBack(member, this->local.GetAllocator());
+}
+
+#pragma mark -
+#pragma mark Remover
+
+// アイテムを消費する
+bool PlayerDataManager::removeItem(const int item_id)
+{
+    char iid_char[10];
+    sprintf(iid_char, "%d", item_id);
     int count = this->getItem(item_id);
-    if (count > 1)
+    if (count > 0)
     {
         // 所持数を-1
-        this->local["item"][id].SetInt(count - 1);
+        this->local["item"][iid_char].SetInt(count - 1);
         // 右手を確認
         if(item_id == this->getItemEquipment(Direction::RIGHT))
         {
@@ -348,91 +393,82 @@ bool PlayerDataManager::setItemUsed(const int item_id)
     return false;
 }
 
-// chapterを切り替え
-void PlayerDataManager::setChapterId(const int chapter_id)
+// パーティメンバーを解除する
+bool PlayerDataManager::removePartyMember(const int chara_id)
 {
-    FUNCLOG
-    this->local["chapter"].SetInt(chapter_id);
-    return;
-}
-
-// キャラクターのプロフィールを追加
-void PlayerDataManager::setCharacterProfile(const int chara_id, const int level)
-{
-    FUNCLOG
-    const char* cid_char = to_string(chara_id).c_str();
-    char buff[50];
-    sprintf(buff, "%d", chara_id);
-    rapidjson::Value cid  (kStringType);
-    cid.SetString(buff, strlen(buff), this->local.GetAllocator());
-    
-    rapidjson::Value::ConstMemberIterator itr = this->local["chara"].FindMember(cid_char);
-    if (itr != this->local["chara"].MemberEnd())
+    bool isExsits = false;
+    vector<CharacterData> members = this->getPartyMemberAll();
+    int member_size = members.size();
+    this->local["party"].Clear();
+    this->local["party"].SetArray();
+    for (int i = 0; i < member_size; i++)
     {
-        // すでに追加されているキャラクター
-        this->local["chara"][cid_char].SetInt(level);
+        if (members[i].chara_id == chara_id)
+        {
+            isExsits = true;
+        }
+        else
+        {
+            this->setPartyMember(members[i]);
+        }
     }
-    else
-    {
-        // 初めて追加するキャラ
-        this->local["chara"].AddMember(cid, rapidjson::Value(level), this->local.GetAllocator());
-    }
-    return;
+    return isExsits;
 }
 
 #pragma mark -
 #pragma mark Getter
 
-//主人公の位置をゲット
-PlayerDataManager::Location PlayerDataManager::getLocation()
+// 主人公の位置をゲット
+Location PlayerDataManager::getLocation(const int num)
 {
-    FUNCLOG
-    rapidjson::Value& loc = this->local["location"];
-    PlayerDataManager::Location location(loc[0].GetInt(), loc[1].GetInt(), loc[2].GetInt(), loc[3].GetInt());
+    int map_id = this->local["map_id"].GetInt();
+    rapidjson::Value& chara = this->local["party"][num];
+    Location location(map_id, chara["x"].GetInt(), chara["y"].GetInt(), chara["direction"].GetInt());
     return location;
 }
 
-//友好度の取得
+// 友好度の取得
 int PlayerDataManager::getFriendship(const int chara_id)
 {
-    FUNCLOG
-    const char* cid = to_string(chara_id).c_str();
-    rapidjson::Value::ConstMemberIterator itr = this->local["friendship"].FindMember(cid);
+    char cid_char[10];
+    sprintf(cid_char, "%d", chara_id);
+    rapidjson::Value::ConstMemberIterator itr = this->local["friendship"].FindMember(cid_char);
     if(itr != this->local["friendship"].MemberEnd()){
-        return this->local["friendship"][cid].GetInt();
+        return this->local["friendship"][cid_char].GetInt();
     } else {
         return -1;
     }
 }
 
-//イベントフラグの取得
-bool PlayerDataManager::getEventFlag(const int map_id, const int event_id)
+// イベントフラグの取得
+int PlayerDataManager::getEventStatus(const int map_id, const int event_id)
 {
-    FUNCLOG
-    const char* mid = to_string(map_id).c_str();
+    char mid_char[10];
+    sprintf(mid_char, "%d", map_id);
     rapidjson::Value& event = this->local["event"];
-    rapidjson::Value::ConstMemberIterator itr = event.FindMember(mid);
+    rapidjson::Value::ConstMemberIterator itr = event.FindMember(mid_char);
     //mapが存在するかチェック
     if(itr == event.MemberEnd()){
-        return false;
+        return 0;
     }
     //event_idが存在するかチェック
-    const char* id = to_string(event_id).c_str();
-    itr = event[mid].FindMember(id);
-    if(itr == event[mid].MemberEnd()){
-        return false;
+    char eid_char[10];
+    sprintf(eid_char, "%d", event_id);
+    itr = event[mid_char].FindMember(eid_char);
+    if(itr == event[mid_char].MemberEnd()){
+        return 0;
     } else {
-        return event[mid][id].GetBool();
+        return event[mid_char][eid_char].GetInt();
     }
 }
 
-//所持しているアイテムの所持数を取得
+// 所持しているアイテムの所持数を取得
 int PlayerDataManager::getItem(const int item_id)
 {
-    FUNCLOG
     rapidjson::Value& item = this->local["item"];
-    const char* id = to_string(item_id).c_str();
-    rapidjson::Value::ConstMemberIterator itr = item.FindMember(id);
+    char iid_char[10];
+    sprintf(iid_char, "%d", item_id);
+    rapidjson::Value::ConstMemberIterator itr = item.FindMember(iid_char);
     int count = 0;
     if(itr != item.MemberEnd()){
         count =  itr->value.GetInt();
@@ -440,11 +476,10 @@ int PlayerDataManager::getItem(const int item_id)
     return count;
 }
 
-//所持しているアイテムをすべて取得
+// 所持しているアイテムをすべて取得
 map<int, int> PlayerDataManager::getItemAll()
 {
-    FUNCLOG
-    map<int, int> items;
+    map<int, int> items {};
     rapidjson::Value& item = this->local["item"];
     for(rapidjson::Value::ConstMemberIterator itr = item.MemberBegin();itr != item.MemberEnd(); itr++)
     {
@@ -458,10 +493,9 @@ map<int, int> PlayerDataManager::getItemAll()
     return items;
 }
 
-//装備アイテムIDの取得
+// 装備アイテムIDの取得
 int PlayerDataManager::getItemEquipment(Direction direction)
 {
-    FUNCLOG
     string key;
     key = (direction == Direction::LEFT) ? "equipment_left" : "equipment_right";
     return this->local[key.c_str()].GetInt();
@@ -470,7 +504,6 @@ int PlayerDataManager::getItemEquipment(Direction direction)
 // 現在のチャプターIDの取得
 int PlayerDataManager::getChapterId()
 {
-    FUNCLOG
     return this->local["chapter"].GetInt();
 }
 
@@ -478,12 +511,8 @@ int PlayerDataManager::getChapterId()
 int PlayerDataManager::getCharacterProfileLevel(const int chara_id)
 {
     int level {-1}; // 存在しない場合は-1を返す
-    const char* cid_char = to_string(chara_id).c_str();
-    char buff[50];
-    sprintf(buff, "%d", chara_id);
-    rapidjson::Value cid  (kStringType);
-    cid.SetString(buff, strlen(buff), this->local.GetAllocator());
-    
+    char cid_char[10];
+    sprintf(cid_char, "%d", chara_id);
     rapidjson::Value::ConstMemberIterator itr = this->local["chara"].FindMember(cid_char);
     if (itr != this->local["chara"].MemberEnd())
     {
@@ -492,13 +521,44 @@ int PlayerDataManager::getCharacterProfileLevel(const int chara_id)
     return level;
 }
 
+// パーティメンバーを取得
+CharacterData PlayerDataManager::getPartyMember(const int num)
+{
+    rapidjson::Value& chara = this->local["party"][num];
+    Location location(this->local["map_id"].GetInt(), chara["x"].GetInt(), chara["y"].GetInt(), chara["direction"].GetInt());
+    return CharacterData(chara["chara_id"].GetInt(), chara["obj_id"].GetInt(), location);
+}
+
+// パーティメンバーを全取得
+vector<CharacterData> PlayerDataManager::getPartyMemberAll()
+{
+    vector<CharacterData> party {};
+    int party_size = this->local["party"].Size();
+    for (int i = 0; i < party_size; i++)
+    {
+        party.push_back(this->getPartyMember(i));
+    }
+    return party;
+}
+
+// 現在のプレイ時間の表示用を取得
+string PlayerDataManager::getPlayTimeDisplay()
+{
+    return this->getPlayTimeDisplay(this->getPlayTimeSeconds());
+}
+
+// プレイ時間を秒で取得
+int PlayerDataManager::getPlayTimeSeconds()
+{
+    return this->timer->getTimeInt();;
+}
+
 #pragma mark -
 #pragma mark Checker
 
-//アイテムを1つ以上持っているかチェック
+// アイテムを1つ以上持っているかチェック
 bool PlayerDataManager::checkItem(const int item_id)
 {
-    FUNCLOG
     int count = this->getItem(item_id);
     if (count > 0) {
         return true;
@@ -507,10 +567,9 @@ bool PlayerDataManager::checkItem(const int item_id)
     }
 }
 
-//アイテムを装備しているかチェック
+// アイテムを装備しているかチェック
 bool PlayerDataManager::checkItemEquipment(const int item_id)
 {
-    FUNCLOG
     int right = this->getItemEquipment(Direction::RIGHT);
     int left = this->getItemEquipment(Direction::LEFT);
     if (item_id == right || item_id == left) {
@@ -520,10 +579,9 @@ bool PlayerDataManager::checkItemEquipment(const int item_id)
     }
 }
 
-//友好度が指定の値と一致するか
+// 友好度が指定の値と一致するか
 bool PlayerDataManager::checkFriendship(const int chara_id, const int val)
 {
-    FUNCLOG
     int level = this->getFriendship(chara_id);
     if(level == val){
         return true;
@@ -532,16 +590,28 @@ bool PlayerDataManager::checkFriendship(const int chara_id, const int val)
     }
 }
 
-//チャプターIDが指定のIDと一致するか
+// チャプターIDが指定のIDと一致するか
 bool PlayerDataManager::checkChapterId(const int chapter_id)
 {
-    FUNCLOG
     if(chapter_id == this->getChapterId())
     {
         return true;
     } else {
         return false;
     }
+}
+
+// イベントを見たかどうか
+bool PlayerDataManager::checkEventIsDone(const int map_id, const int event_id)
+{
+    int status = this->getEventStatus(map_id, event_id);
+    return status < 0 ? true : false;
+}
+
+// イベントステータスが指定の値かどうか
+bool PlayerDataManager::checkEventStatus(const int map_id, const int event_id, const int status)
+{
+    return status == abs(this->getEventStatus(map_id, event_id)) ? true : false;
 }
 
 #pragma mark -

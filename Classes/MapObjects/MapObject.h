@@ -30,10 +30,12 @@ private:
     Rect collisionRect {Rect::ZERO};
 	Light* light { nullptr };
     MapObjectList* objectList { nullptr };
-    Point gridPosition {Point::ZERO};
     bool _isMoving { false };
+protected:
+    deque<vector<Direction>> directionsQueue {};
+    Location location {};
 public:
-    function<void(MapObject*)> onMove { nullptr };
+    function<void(MapObject*)> onMoved { nullptr };
 	
 // インスタンスメソッド
 public:
@@ -57,16 +59,27 @@ public:
 	int getEventId() const;
 	Trigger getTrigger() const;
     bool isMoving() const;
-	const bool isHit() const;
-    const bool isHit(const Direction& direction) const;
-    const bool isHit(const Direction (&directions)[2]) const;
+    
+    // collision
     Rect getCollisionRect() const;
     Rect getCollisionRect(const Direction& direction) const;
-    Rect getCollisionRect(const Direction (&directions)[2]) const;
-
-    void moveBy(const Direction& direction, const int gridNum, function<void()> onMoved, const float ratio = 1.0f);
-    void moveBy(const vector<Direction>& directions, const int gridNum, function<void()> onMoved, const float ratio = 1.0f);
-    void moveTo(const Point& destPosition, function<void()> onMoved, const float ratio = 1.0f);
+    Rect getCollisionRect(const vector<Direction>& directions) const;
+    const bool isHit() const;
+    const bool isHit(const Direction& direction) const;
+    const bool isHit(const vector<Direction>& directions) const;
+    
+    // move
+    Vec2 createMoveVec(const vector<Direction>& directions) const;
+    bool canMove(const vector<Direction>& directions) const;
+    bool moveBy(const Direction& direction, function<void()> onMoved, const float ratio = 1.0f);
+    bool moveBy(const vector<Direction>& directions, function<void()> onMoved, const float ratio = 1.0f);
+    void moveBy(const Direction& direction, const int gridNum, function<void(bool)> onMoved, const float ratio = 1.0f);
+    void moveBy(const vector<Direction>& directions, const int gridNum, function<void(bool)> onMoved, const float ratio = 1.0f);
+    void moveByQueue(deque<vector<Direction>> directionsQueue, function<void(bool)> callback, const float ratio = 1.0f);
+    void clearDirectionsQueue();
+    
+    // イベント関数
+    virtual void onEnterMap() {};                               // マップに追加された時
 
     void drawDebugMask(); // デバッグ用マスク
 };

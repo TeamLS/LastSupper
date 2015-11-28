@@ -58,14 +58,16 @@
 ●マップ移動
 ・type名...changeMap
 ・必要なもの...移動先のマップ名
-　　　　　　　　　　移動先のx座標
-　　　　　　　　　　移動先のy座標
+　　　　　　　 移動先のx座標
+　　　　　　　 移動先のy座標,
+	       移動先マップの発動イベント#
 （例）
 	{
 	"type":"changeMap",
 	"mapID":"移動先のマップ番号",
 	"x":移動先のx座標(int),
-	"y":移動先のy座標(int)
+	"y":移動先のy座標(int),
+	"EventID":"イベントID"#
 	}
 
 
@@ -379,20 +381,6 @@
 	}
 
 
-●キャラチップ差し替え
-・type名...changeImg
-・必要なもの...オブジェクトID
-　　　　　　　　画像の名前
-※キャラを倒れている画像に変える
-とか
-（例）
-	{
-	"type":"changeImage",
-	"objectID":"書き換えるオブジェクトのID",
-	"image":"画像の名前"
-	}
-
-
 ●フェードイン
 ・type名...fadeIn
 ・必要なもの...必要ならばフェードインにかかる時間
@@ -438,7 +426,7 @@
 
 
 ●カメラ
-・type名、、、camera
+・type名、、、createCamera
 ・必要なもの、、、マップ番号
 　　　　　　　　　当てるマスの左下の座標
 　　　　　　　　　ゴール地点の座標（動かす場合）
@@ -447,31 +435,28 @@
                   別のキャラを追いかける場合は追いかけるやつのobjID
 （例）
 	{
-	"type" 　　:"camera",
+	"type" 　　:"createCamera",
 	"mapID"　　:"マップ番号",#
 	"x"　　　　:x座標,#
 	"y"　　　　:y座標,#
-	"nextX"　　:カメラが向かうx座標,#
-	"nextY"　　:カメラが向かうy座標,#
-	"time"　　 :"かかる秒数",#
 	"return"   :"hero"←主人公に戻る,#
 	"objID"    :"追いかけるキャラのオブジェクトID"#
 	},
 
-(例)マップまたぐカメラ
-{
-	"type" 　　:"camera",
-	"mapID"　　:"マップ番号",#
-	"x"　　　　:x座標,#
-	"y"　　　　:y座標,#,
-	"action"   :[
-		{
-			"type":"camera",
-			"nextX":20,
-			"nextY":
-		}
+
+●マップまたぐカメラ
+type名,,,camera,
+必要なもの,,,nextX
+	     nextY
+	     timeだけ
 	
-	]
+
+
+(例){  
+			"type":"camera",
+			"nextX"　　:カメラが向かうx座標,#
+			"nextY"　　:カメラが向かうy座標,#
+			"time"　　 :"かかる秒数",#
 }
 	
 	
@@ -509,25 +494,6 @@
     }　　
 
 
-●キャラを見えなくする
-・type名、、、hideChara
-・必要なもの、、、消すキャラのID
-(例)
-　　{
-	  "type":"hideChara",
-	  "objID":"消すキャラのオブジェクトID or hero"
-    }　　
-
-
-●キャラを見えるように戻す
-・type名、、、showChara
-・必要なもの、、、キャラのobjID
-(例)
-　　{
-	  "type":"showChara",
-	  "objID":"キャラのオブジェクトID又はhero"
-    }
-    
     　　
 ●ゲームオーバー
 ・type名,,,gameOver
@@ -544,7 +510,7 @@
 (例)
 　　{
 	  "type":"changeFlg",
-	  "flg":"1"
+	  "flg":1 (int)
     }　
 
 ●強制的にアイテムを捨てる
@@ -556,7 +522,7 @@
 (例)
 　　{
 	  "type":"removeItem",
-	  "itemID":"消すアイテムID"
+	  "itemID":"消すアイテムID"Fcount
     }　
 
 とりあえず、
@@ -695,6 +661,20 @@ MAIN-Ohiromaの19
 	{
 		"type":"stopSwing",
 	}
+
+●環境光設定
+・type名・・・setAmbient
+・必要なもの・・・昼間　day
+		　夜　　night
+                  真っ暗　basement
+
+（例）
+	{
+		"type":"setAmbient",
+		"ambient":"環境名"
+	}
+
+
 TODO >>>>>>>>>>>>>>>>>>
 
 show〜やhide〜、create〜やremove〜の時は出現させる時に、アニメーションようのオプションがあるといいかも

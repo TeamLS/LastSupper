@@ -11,6 +11,7 @@
 #include "Layers/Menu/SaveDataSelector.h"
 #include "Layers/Menu/ItemMenuLayer.h"
 #include "Layers/Menu/CharacterMenuLayer.h"
+#include "Managers/DungeonSceneManager.h"
 
 // クラス変数
 const string DungeonMenuScene::MAIN_LAYER_NAME = "mainMenuLayer";
@@ -118,7 +119,7 @@ void DungeonMenuScene::createCharaMenu()
     this->charaMenu = charaMenu;
 }
 
-void DungeonMenuScene::onPreloadFinished(){}
+void DungeonMenuScene::onPreloadFinished(LoadingLayer* loadingLayer){}
 
 // 方向キーを押した時
 void DungeonMenuScene::onCursorKeyPressed(const Key& key){}
@@ -142,6 +143,8 @@ void DungeonMenuScene::onMenuHidden()
         this->onPopMenuScene();
     }
     Director::getInstance()->popScene();
+    
+    DungeonSceneManager::getInstance()->startStopWatch(); // カウントダウンをしれてば再開
 }
 
 #pragma mark -
@@ -193,7 +196,7 @@ void DungeonMenuScene::onItemMenuCanceled()
 #pragma mark -
 #pragma mark CharacterMenu
 
-// キャラメニューが洗濯された時
+// キャラメニューが選択された時
 void DungeonMenuScene::onCharaMenuSelected()
 {
     FUNCLOG

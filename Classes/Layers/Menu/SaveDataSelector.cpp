@@ -11,6 +11,7 @@
 
 #include "Scenes/DungeonScene.h"
 #include "Datas/Scene/DungeonSceneData.h"
+#include "UI/NotificationBand.h"
 
 // 定数
 const float SaveDataSelector::INNER_H_MARGIN_RATIO = 0.05f;
@@ -87,6 +88,8 @@ bool SaveDataSelector::init(bool write = false)
 void SaveDataSelector::show()
 {
 	this->setVisible(true);
+    this->setScale(0);
+    this->runAction(EaseCubicActionOut::create(ScaleTo::create(0.3f, 1.f)));
 	this->listenerKeyboard->setEnabled(true);
 }
 
@@ -94,7 +97,8 @@ void SaveDataSelector::show()
 void SaveDataSelector::hide()
 {
 	this->listenerKeyboard->setEnabled(false);
-	this->setVisible(false);
+    this->runAction(EaseCubicActionOut::create(ScaleTo::create(0.3f, 0)));
+	//this->setVisible(false);
 }
 
 // 選択しているindexが変わった時
@@ -141,14 +145,11 @@ void SaveDataSelector::onSpacePressed(int idx)
         // セーブ時
         SoundManager::getInstance()->playSE("save.mp3");
         PlayerDataManager::getInstance()->save(idx);
-        Sprite* back = Sprite::create();
-        back->setTextureRect(Rect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT/4));
-        back->setColor(Color3B::BLACK);
-        back->setPosition(WINDOW_CENTER);
-        this->addChild(back);
-        Label* message = Label::createWithTTF("セーブが完了しました", "fonts/cinecaption2.28.ttf", back->getContentSize().height / 5);
-        message->setPosition(Point(message->getContentSize().width / 2 + (WINDOW_WIDTH - message->getContentSize().width)/2, back->getContentSize().height / 2));
-        back->addChild(message);
+        
+        // 完了メッセージ表示
+        NotificationBand* notification {NotificationBand::create("セーブが完了しました")};
+        notification->setBandColor(Color3B(64,0,0));
+        this->addChild(notification);
         this->comfirm_flag = true;
     }
     else

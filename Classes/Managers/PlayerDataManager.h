@@ -11,6 +11,9 @@
 
 #include "define.h"
 
+class CharacterData;
+class StopWatch;
+
 class PlayerDataManager
 {
 //構造体
@@ -25,16 +28,7 @@ public:
         SaveIndex(int i, const string& chap, const string& mn, const string& pt, const string& sc):data_id(i), chapter(chap), map_name(mn), play_time(pt), save_count(sc){};
         SaveIndex(){};
     };
-    struct Location
-    {
-        int map_id{0};
-        int x {0};
-        int y {0};
-        Direction direction {Direction::SIZE};
-        Location(int map_id, int x, int y, int direction):map_id(map_id), x(x), y(y), direction(static_cast<Direction>(direction)){};
-        Location(int map_id, int x, int y, Direction direction):map_id(map_id), x(x), y(y), direction(direction){};
-        Location(){};
-    };
+    
 
 //インスタンス変数
 private:
@@ -46,59 +40,68 @@ private:
     int local_id {0};
     // FileUtils
     cocos2d::FileUtils* fu;
-    // 時間計測開始時間(単位:ms)
-    double start_time_ms {0};
+    // Timer
+    StopWatch* timer {nullptr};
     // ローカルセーブデータの存在の有無
     bool local_exist[MAX_SAVE_COUNT];
 
 //通常関数
 public:
-    //メインとなるローカルデータのセット
+    // ローカルセーブデータ処理
     void setMainLocalData(const int id);
-    //ローカルセーブデータリストの取得
     vector<SaveIndex> getSaveList();
-    //セーブ
-    void save(const int id);
-    // セーブデータが存在するかチェック
-    bool checkSaveDataExists(const int id);
-    // セーブデータIDの取得
     int getSaveDataId();
-    // プレイ時間の取得
-    int getPlayTimeSeconds();
-    // 時間取得
-    double getSec();
-    /* flag管理系 */
+    bool checkSaveDataExists(const int id);
+    void save(const int id);
+
     // SET
-    void setLocation(const Location& location);
+    void setLocation(const Location& location, const int num = 0);
+    void setLocation(const CharacterData& character, const int num = 0);
+    void setLocation(const vector<CharacterData>& characters);
     void setFriendship(const int chara_id, const int level);
-    void setEventFlag(const int map_id, const int event_id, const bool& flag);
+    void setEventNeverAgain(const int map_id, const int event_id, const bool flag = true);
+    void setEventStatus(const int map_id, const int event_id, const int status);
     void setItem(const int item_id);
     void setItemEquipment(const Direction direction, const int item_id);
-    bool setItemUsed(const int item_id);
     void setChapterId(const int chapter_id);
     void setCharacterProfile(const int chara_id, const int level);
+    void setPartyMember(const CharacterData& chara);
+    
+    // REMOVE
+    bool removeItem(const int item_id);
+    bool removePartyMember(const int chara_id);
+    
     // GET
-    Location getLocation();
+    Location getLocation(const int num = 0);
     int getFriendship(const int chara_id);
-    bool getEventFlag(const int map_id, const int event_id);
+    int getEventStatus(const int map_id, const int event_id);
     int getItem(const int item_id);
     map<int, int> getItemAll();
     int getItemEquipment(Direction direction);
     int getChapterId();
     int getCharacterProfileLevel(const int chara_id);
+    CharacterData getPartyMember(const int num = 0);
+    vector<CharacterData> getPartyMemberAll();
+    int getPlayTimeSeconds();
+    string getPlayTimeDisplay();
+    string getPlayTimeDisplay(const int sec);
+    
     // CHECK
     bool checkItem(const int item_id);
     bool checkItemEquipment(const int item_id);
     bool checkFriendship(const int chara_id, const int val);
     bool checkChapterId(const int chapter_id);
+    bool checkEventIsDone(const int map_id, const int event_id);
+    bool checkEventStatus(const int map_id, const int event_id, const int status);
+    
 private:
-    //グローバルデータのセット
+    // グローバルデータのセット
     bool setGlobalData();
-    //セーブデータを全初期化
+    // セーブデータを全初期化
     void initializeFiles();
-    //JSONファイル読み込み
+    // JSONファイル読み込み
     rapidjson::Document readJsonFile(const string& path);
-    //JSONファイル書き出し
+    // JSONファイル書き出し
     void writeJsonFile(const string& path, const rapidjson::Document& doc);
 
 //singleton用関数

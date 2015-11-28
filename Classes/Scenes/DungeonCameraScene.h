@@ -9,11 +9,35 @@
 #ifndef __LastSupper__DungeonCameraScene__
 #define __LastSupper__DungeonCameraScene__
 
-#include "Scenes/baseScene.h"
+#include "Scenes/DungeonScene.h"
 
-class DungeonCameraScene : public baseScene
+#include "Event/GameEvent.h"
+
+class DungeonCameraScene : public DungeonScene
 {
+// 定数
+public:
+    using EventFinishCallback = function<void()>;
     
+// クラスメソッド
+public:
+    static DungeonCameraScene* create(DungeonSceneData* data, GameEvent* event, EventFinishCallback callback);
+
+// インスタンス変数
+private:
+    EventFinishCallback callback { nullptr };
+    GameEvent* event { nullptr };
+
+// インスタンスメソッド
+private:
+    DungeonCameraScene();
+    ~DungeonCameraScene();
+    bool init(DungeonSceneData* data, GameEvent* event, EventFinishCallback callback);
+    virtual void onEnter() override;
+    virtual void onPreloadFinished(LoadingLayer* loadingLayer) override;
+    virtual void onInitEventFinished(LoadingLayer* loadingLayer) override;
+    virtual void onAfterInitEventFinished() override;
+    void onCameraEventFinished();
 };
 
 #endif /* defined(__LastSupper__DungeonCameraScene__) */

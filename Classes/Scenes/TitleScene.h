@@ -9,12 +9,12 @@
 #ifndef __TITLE_SCENE_H__
 #define __TITLE_SCENE_H__
 
-#include "Scenes/baseScene.h"
+#include "Scenes/BaseScene.h"
 
 class TitleMainMenuLayer;
 class SaveDataSelector;
 
-class TitleScene : public baseScene
+class TitleScene : public BaseScene
 {
 	// 列挙型
 	enum struct MenuType
@@ -30,7 +30,8 @@ public:
 	// インスタンスメソッド
 private:
 	virtual bool init();
-	void onPreloadFinished();
+    virtual void onEnter();
+	void onPreloadFinished(LoadingLayer* loadingLayer);
 	void onStartSelected();
 	void onContinueSelected();
 	void onExitSelected();

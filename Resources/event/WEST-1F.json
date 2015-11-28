@@ -11,7 +11,7 @@
 					"objID":"1087"
 				},
 				{
-					"type":"camera",
+					"type":"createCamera",
 					"x":20,
 					"y":18,
 					"action":[
@@ -30,7 +30,6 @@
 									"action":[
 										{
 											"type":"camera",
-											"mapID":"7",
 											"nextX":20,
 											"nextY":3,
 											"time":2.0
@@ -45,7 +44,7 @@
 					]
 				},
 				{
-					"type":"camera",
+					"type":"createCamera",
 					"mapID":"6",
 					"x":20,
 					"y":33,
@@ -85,7 +84,7 @@
 					]
 				},
 				{
-					"type":"camera",
+					"type":"createCamera",
 					"mapID":"8",
 					"x":20,
 					"y":3,
@@ -135,6 +134,9 @@
 				},
 				{
 					"type":"stopBGM"
+				},
+				{
+					"type":"already"
 				}
 			]
 		}
@@ -269,7 +271,7 @@
 			"type":"if",
 			"condition":[
 				{
-					"flg":"0"
+					"flg":0
 				}
 			],
 			"action":[
@@ -287,7 +289,7 @@
 								},
 								{
 									"type":"changeFlg",
-									"flg":"1"
+									"flg":1
 								}
 							]
 						},
@@ -375,7 +377,7 @@
 									"action":[
 										{
 											"type":"charaMsg",
-											"text":["中山んが喜びそうなものを持ってたハズだ"],
+											"text":["中山さんが喜びそうなものを持ってたハズだ"],
 											"charaID":"0",
 											"imgID":"1"
 										},
@@ -404,7 +406,7 @@
 			"type":"if",
 			"condition":[
 				{
-					"flg":"1"
+					"flg":1
 				}
 			],
 			"action":[
@@ -422,7 +424,7 @@
 								},
 								{
 									"type":"changeFlg",
-									"flg":"2"
+									"flg":2
 								}
 							]
 						},
@@ -510,7 +512,7 @@
 									"action":[
 										{
 											"type":"charaMsg",
-											"text":["中山んが喜びそうなものを持ってたハズだ"],
+											"text":["中山さんが喜びそうなものを持ってたハズだ"],
 											"charaID":"0",
 											"imgID":"1"
 										},
@@ -539,7 +541,7 @@
 			"type":"if",
 			"condition":[
 				{
-					"flg":"2"
+					"flg":2
 				}
 			],
 			"action":[
@@ -557,7 +559,7 @@
 								},
 								{
 									"type":"changeFlg",
-									"flg":"3"
+									"flg":3
 								}
 							]
 						},
@@ -645,7 +647,7 @@
 									"action":[
 										{
 											"type":"charaMsg",
-											"text":["中山んが喜びそうなものを持ってたハズだ"],
+											"text":["中山さんが喜びそうなものを持ってたハズだ"],
 											"charaID":"0",
 											"imgID":"1"
 										},
@@ -674,7 +676,7 @@
 			"type":"if",
 			"condition":[
 				{
-					"flg":"3"
+					"flg":3
 				}
 			],
 			"action":[
@@ -692,7 +694,7 @@
 								},
 								{
 									"type":"changeFlg",
-									"flg":"4"
+									"flg":4
 								}
 							]
 						},
@@ -780,7 +782,7 @@
 									"action":[
 										{
 											"type":"charaMsg",
-											"text":["中山んが喜びそうなものを持ってたハズだ"],
+											"text":["中山さんが喜びそうなものを持ってたハズだ"],
 											"charaID":"0",
 											"imgID":"1"
 										},
@@ -809,7 +811,7 @@
 			"type":"if",
 			"condition":[
 				{
-					"flg":"5"
+					"flg":4
 				}
 			],
 			"action":[
@@ -827,7 +829,7 @@
 								},
 								{
 									"type":"changeFlg",
-									"flg":"0"
+									"flg":0
 								}
 							]
 						},
@@ -915,7 +917,7 @@
 									"action":[
 										{
 											"type":"charaMsg",
-											"text":["中山んが喜びそうなものを持ってたハズだ"],
+											"text":["中山さんが喜びそうなものを持ってたハズだ"],
 											"charaID":"0",
 											"imgID":"1"
 										},
@@ -1012,7 +1014,7 @@
 						},
 						{
 							"text":["あ、すみません。\n暗いお話してしまって"],
-							"charaID":"2",
+							"charaID":"1",
 							"imgID":"1"
 						}
 					]

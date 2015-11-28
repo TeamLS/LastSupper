@@ -11,6 +11,8 @@
 
 #include "Common.h"
 
+#include "Datas/MapObject/EnemyData.h"
+
 class DungeonScene;
 class TiledMapLayer;
 class MapObject;
@@ -19,6 +21,9 @@ class EventFactory;
 class EventScript;
 class EventScriptValidator;
 class Party;
+class GameEvent;
+class Enemy;
+class StopWatch;
 
 // ダンジョンシーンのマップ間で共有すべき情報を持つシングルトンクラス
 class DungeonSceneManager
@@ -32,7 +37,9 @@ public:
 private:
     EventFactory* eventFactory { nullptr };
     EventScriptValidator* scriprtValidator { nullptr };
-    Party* party { nullptr };
+    Sprite* cover { nullptr };
+    vector<SummonData> summonDatas {};
+    StopWatch* stopWatch {nullptr};
     
 // インスタンスメソッド
 private:
@@ -56,26 +63,37 @@ public:
     // TiledMaplayer
     Size getMapSize() const;
     void addMapObject(MapObject* mapobject);
+    void addEnemy(Enemy* enemy);
     
     // Director
-    void changeMap(const PlayerDataManager::Location& location);
+    void changeMap(const Location& location, const int initEventId);
     
     // EventListener
-    void setInputCheckInterval(const float interval);
-    void setEventListenerPaused(const bool paused);
     bool isPressed(const Key& key);
     vector<Key> getPressedCursorKeys() const;
+    
+    // Enemy
+    vector<SummonData> getSummonDatas() const;
     
     // EventTask
     void runEvent(const int eventId);
     void pushEventBack(const int eventId);
     void pushEventFront(const int eventId);
+    void pushEventBack(GameEvent* event);
+    void pushEventFront(GameEvent* event);
     void runEventQueue();
     bool existsEvent() const;
     int getRunningEventId() const;
+    int getPushingEventid() const;
     
     // PlayerControlTask
     void setPlayerControlEnable(bool enable);
+    
+    // StopWatch
+    StopWatch* getStopWatch();
+    void releaseStopWatch();
+    void pauseStopWatch();
+    void startStopWatch();
 };
 
 #endif /* defined(__LastSupper__DungeonSceneManager__) */

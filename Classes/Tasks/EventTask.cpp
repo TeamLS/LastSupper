@@ -47,6 +47,7 @@ bool EventTask::init()
 void EventTask::runEventQueue()
 {
     if(!this->existsEvent()) return;
+    this->resetPushingEventId();
     this->run();
     // update開始
     Director::getInstance()->getScheduler()->scheduleUpdate(this, 0, false);
@@ -98,15 +99,14 @@ void EventTask::runEvent(vector<int> eventIds, function<void()> callback)
     this->callbackInfo = CallbackWithId({lastEventId, callback});
 }
 
-// イベントをIDベクタから実行
-void EventTask::runEvent(vector<int> eventIds)
+// イベントを実行
+void EventTask::runEvent(GameEvent* event, function<void()> callback)
 {
-    if(eventIds.empty()) return;
+    this->pushEventBack(event);
     
-    for(int eventId : eventIds)
-    {
-        this->runEvent(eventId);
-    }
+    this->callbackInfo = CallbackWithId({static_cast<int>(EventID::UNDIFINED), callback});
+    
+    this->runEventQueue();
 }
 
 // キューに指定IDイベントを後ろから詰める
@@ -127,6 +127,22 @@ bool EventTask::pushEventFront(int eventId)
     this->eventQueue.push_front({eventId, event});
     
     return true;
+}
+
+// キューにイベントを後ろから詰める、EventIDは、キューの先頭のものを使用
+void EventTask::pushEventBack(GameEvent* event)
+{
+    if(!event) return;
+    
+    this->eventQueue.push_back({this->getEventId(this->eventQueue.front()), event});
+}
+
+// キューにイベントを前から詰める、EventIDは現在実行中のものを使用
+void EventTask::pushEventFront(GameEvent* event)
+{
+    if(!event) return;
+    
+    this->eventQueue.push_front({this->getEventId(this->runningEvent), event});
 }
 
 // 現在実行中のイベントがあるか
@@ -152,8 +168,9 @@ void EventTask::update(float delta)
     {
         if(this->callbackInfo.second && this->callbackInfo.first == this->getEventId(this->runningEvent))
         {
-            this->callbackInfo.second();
+            function<void()> cb { this->callbackInfo.second };
             this->callbackInfo = CallbackWithId({static_cast<int>(EventID::UNDIFINED), nullptr});
+            cb();
         }
         CC_SAFE_RELEASE(this->getGameEvent(this->runningEvent));
         this->runningEvent = EventWithId({static_cast<int>(EventID::UNDIFINED), nullptr});
@@ -185,6 +202,24 @@ deque<EventTask::EventWithId> EventTask::getEvents() const
 }
 
 #pragma mark -
+#pragma mark pushingEventId
+
+int EventTask::getPushingEventId() const
+{
+    return this->pushingEventId;
+}
+
+void EventTask::setPushingEventId(const int event_id)
+{
+    this->pushingEventId = event_id;
+}
+
+void EventTask::resetPushingEventId()
+{
+    this->pushingEventId = etoi(EventID::UNDIFINED);
+}
+
+#pragma mark -
 #pragma mark private
 
 // キューにある先頭のイベントを実行
@@ -205,7 +240,9 @@ void EventTask::run()
 // IDからイベントを生成
 GameEvent* EventTask::createEventById(int eventId)
 {
-    if(eventId == static_cast<int>(EventID::UNDIFINED) || PlayerDataManager::getInstance()->getEventFlag(PlayerDataManager::getInstance()->getLocation().map_id, eventId)) return nullptr;
+    if(eventId == static_cast<int>(EventID::UNDIFINED) || PlayerDataManager::getInstance()->checkEventIsDone(PlayerDataManager::getInstance()->getLocation().map_id, eventId)) return nullptr;
+    
+    this->setPushingEventId(eventId);
     
     DungeonSceneManager* manager {DungeonSceneManager::getInstance()};
     

@@ -11,6 +11,9 @@
 
 #include "Layers/Menu/MenuLayer.h"
 
+class MiniSelector;
+class SlideNode;
+
 class DungeonMainMenuLayer : public MenuLayer
 {
 	// 列挙型
@@ -24,6 +27,10 @@ public:
 		CLOSE,
 		SIZE
 	};
+
+    // 定数
+private:
+    static const float SLIDE_TIME;
 	
 	// クラスメソッド
 public:
@@ -35,17 +42,28 @@ public:
     function<void()> onSaveMenuSelected {nullptr};
     function<void()> onItemMenuSelected {nullptr};
     function<void()> onCharacterMenuSelected {nullptr};
+    vector<SlideNode*> slideNodes {};
+    
 private:
     int menuIndex {0};
+    MiniSelector* confirm {nullptr};
+    Label* play_time {nullptr};
+    Sprite* cover {nullptr};
 	// インスタンスメソッド
 private:
 	DungeonMainMenuLayer();
 	~DungeonMainMenuLayer();
 	virtual bool init();
+    void confirmTitleback();
 
 	virtual void onIndexChanged(int newIdx, bool sound = true);
 	virtual void onSpacePressed(int idx);
 	virtual void onMenuKeyPressed();
+    void onConfirmSelected(int idx);
+    void onConfirmCanceled();
+    void slideIn();
+    void slideOut();
+    void updateTime(float delta);
 public:
     int getMenuIndex();
     virtual void show();

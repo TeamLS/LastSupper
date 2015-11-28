@@ -12,6 +12,7 @@
 #include "Event/EventScriptMember.h"
 
 #include "MapObjects/MapObject.h"
+#include "MapObjects/MapObjectList.h"
 
 #include "Managers/DungeonSceneManager.h"
 
@@ -83,4 +84,20 @@ void CreateMapObjectEvent::run()
 
     DungeonSceneManager::getInstance()->addMapObject(target);
     this->setDone();
+}
+
+#pragma mark -
+#pragma mark RemoveMapObjectEvent
+
+bool RemoveMapObjectEvent::init(rapidjson::Value& json)
+{
+    if(!MapObjectEvent::init(json)) return false;
+    
+    return true;
+}
+
+void RemoveMapObjectEvent::run()
+{
+    this->setDone();
+    DungeonSceneManager::getInstance()->getMapObjectList()->removeById(stoi(this->objectId));
 }

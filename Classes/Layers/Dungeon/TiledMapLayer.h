@@ -11,16 +11,16 @@
 
 #include "Common.h"
 
+class Enemy;
 class MapObject;
-class EventListenerKeyboardLayer;
-class Character;
 class MapObjectList;
+class Party;
 
 class TiledMapLayer : public Layer
 {
 // クラスメソッド
 public:
-	CREATE_FUNC_WITH_PARAM(TiledMapLayer, const PlayerDataManager::Location&)
+	CREATE_FUNC_WITH_PARAM(TiledMapLayer, const Location&)
 
 // インスタンス変数
 private:
@@ -31,15 +31,20 @@ private:
 private:
 	TiledMapLayer();
 	~TiledMapLayer();
-	bool init(const PlayerDataManager::Location&);
+	bool init(const Location&);
 	
 public:
     experimental::TMXTiledMap* getTiledMap();
     MapObjectList* getMapObjectList() const;
     Size getMapSize() const;
+    // Layer
     void hideLayer(const string& layerName);
-    void addMapObject(MapObject* mapObject);
-    void addMapObject(MapObject* mapObject, const Point& gridPoint);
+    void swingLayer(const string& layerName);
+    void stopLayerActions();
+    // MapObject
+    void setParty(Party* party);
+    void addEnemy(Enemy* enemy);
+    void addMapObject(MapObject* mapObject, bool addingToList = true);
     void setZOrderByPosition(MapObject* mapObject);
 };
 

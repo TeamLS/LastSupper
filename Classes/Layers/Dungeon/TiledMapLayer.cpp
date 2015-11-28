@@ -10,23 +10,19 @@
 
 #include "Layers/EventListener/EventListenerKeyboardLayer.h"
 
+#include "MapObjects/Character.h"
 #include "MapObjects/MapObjectFactory.h"
 #include "MapObjects/MapObjectList.h"
-#include "MapObjects/Character.h"
+#include "MapObjects/Party.h"
 
 // コンストラクタ
 TiledMapLayer::TiledMapLayer(){FUNCLOG}
 
 // デストラクタ
-TiledMapLayer::~TiledMapLayer()
-{
-    FUNCLOG
-    
-    CC_SAFE_RELEASE_NULL(this->objectList);
-}
+TiledMapLayer::~TiledMapLayer(){FUNCLOG}
 
 // 初期化
-bool TiledMapLayer::init(const PlayerDataManager::Location& location)
+bool TiledMapLayer::init(const Location& location)
 {
     if(!Layer::init()) return false;
     
@@ -38,7 +34,7 @@ bool TiledMapLayer::init(const PlayerDataManager::Location& location)
     
     // オブジェクトリスト生成
     MapObjectList* objectList {MapObjectFactory::createMapObjectList(tiledMap)};
-    CC_SAFE_RETAIN(objectList);
+    this->addChild(objectList);
     this->objectList = objectList;
     
     // オブジェクトリストを元にマップ上に配置
@@ -71,27 +67,71 @@ Size TiledMapLayer::getMapSize() const
 // マップの指定レイヤを隠す
 void TiledMapLayer::hideLayer(const string& layerName)
 {
-    this->tiledMap->getLayer(layerName)->setVisible(false);
+    if(experimental::TMXLayer* layer { this->tiledMap->getLayer(layerName) })
+    {
+        layer->setVisible(false);
+    }
+}
+
+// マップの指定レイヤを揺らす
+void TiledMapLayer::swingLayer(const string& layerName)
+{
+    if(experimental::TMXLayer* layer { this->tiledMap->getLayer(layerName) })
+    {
+        layer->runAction(RepeatForever::create(Sequence::create(MoveTo::create(0.2f, Point(layer->getPosition().x, layer->getPosition().y + GRID * 0.2f)), MoveTo::create(0.2f, Point(layer->getPosition().x, layer->getPosition().y - GRID * 0.2f)), nullptr)));
+    }
+}
+
+// マップレイヤのアクションを全て停止
+void TiledMapLayer::stopLayerActions()
+{
+    for(Node* layerNode : this->tiledMap->getChildren())
+    {
+        layerNode->stopAllActions();
+    }
+}
+
+// パーティをマップ上に設置
+void TiledMapLayer::setParty(Party* party)
+{
+    if(!party) return;
+    
+    for(Character* member : party->getMembers())
+    {
+        this->addMapObject(member, false);
+    }
+    
+    this->objectList->setParty(party);
+    
+}
+
+// 敵をマップに配置
+void TiledMapLayer::addEnemy(Enemy* enemy)
+{
+    if(!enemy) return;
+    
+    this->objectList->addEnemy(enemy);
+    this->addMapObject(enemy, false);
+    enemy->onEnterMap(this->objectList->getParty()->getMainCharacter()->getGridRect());
 }
 
 // マップにオブジェクトを追加
-void TiledMapLayer::addMapObject(MapObject* mapObject)
+void TiledMapLayer::addMapObject(MapObject* mapObject, bool addingToList)
 {
-    this->objectList->add(mapObject);
+    if(!mapObject) return;
+    
+    Point cocosPoint {MapUtils::convertToCCPoint(this->getMapSize(), mapObject->getGridPosition(), mapObject->getContentSize())};
+    mapObject->setPosition(cocosPoint);
     mapObject->drawDebugMask();
     mapObject->setMapObjectList(this->objectList);
     this->tiledMap->addChild(mapObject);
     this->setZOrderByPosition(mapObject);
-    mapObject->onMove = CC_CALLBACK_1(TiledMapLayer::setZOrderByPosition, this);
-}
-
-// マップにオブジェクトを追加
-void TiledMapLayer::addMapObject(MapObject* mapObject, const Point& gridPoint)
-{
-    Point cocosPoint = MapUtils::convertToCCPoint(this->getMapSize(), gridPoint);
-    mapObject->setPosition(cocosPoint.x + mapObject->getContentSize().width / 2, cocosPoint.y);
-    mapObject->setGridPosition(gridPoint);
-    this->addMapObject(mapObject);
+    mapObject->onMoved = CC_CALLBACK_1(TiledMapLayer::setZOrderByPosition, this);
+    
+    if(!addingToList) return;
+    
+    this->objectList->add(mapObject);
+    mapObject->onEnterMap();
 }
 
 // マス座標からZOrder値を設定
