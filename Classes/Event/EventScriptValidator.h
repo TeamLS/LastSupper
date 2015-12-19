@@ -1,4 +1,4 @@
-//
+﻿//
 //  EventScriptValidator.h
 //  LastSupper
 //

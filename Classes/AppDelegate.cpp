@@ -1,4 +1,4 @@
-#include "AppDelegate.h"
+﻿#include "AppDelegate.h"
 #include "Scenes/StartUpScene.h"
 
 // コンストタクタ
